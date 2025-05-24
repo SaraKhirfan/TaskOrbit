@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:task_orbit/screens/Product_Owner/my_projects_screen.dart';
-import 'package:task_orbit/widgets/drawer_header.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/sm_bottom_nav.dart';
@@ -9,6 +8,7 @@ import '../../widgets/sm_drawer.dart';
 import '../../services/sprint_service.dart';
 import '../../services/RetrospectiveService.dart';
 import 'DetailedRetroReportScreen.dart';
+import '../../services/FeedbackService.dart';
 
 class SMReportsAnalyticsScreen extends StatefulWidget {
   final Map<String, dynamic> project;
@@ -31,6 +31,8 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
   List<Map<String, dynamic>> sprints = [];
   List<Map<String, dynamic>> closedRetrospectives = [];
   Map<String, dynamic>? activeSprint;
+  List<Map<String, dynamic>> _clientFeedback = [];
+  bool _isLoadingFeedback = false;
 
   // Loading state
   bool _isLoading = true;
@@ -44,6 +46,7 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
     _sprintService = Provider.of<SprintService>(context, listen: false);
     _retroService = Provider.of<RetrospectiveService>(context, listen: false);
     _loadProjectData();
+    _loadClientFeedback();
   }
 
   Future<void> _loadProjectData() async {
@@ -53,7 +56,8 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
 
     try {
       // Load sprints
-      final projectSprints = await _sprintService.getSprints(widget.project['id']);
+      final projectSprints = await _sprintService.getSprints(
+          widget.project['id']);
 
       // Load retrospectives
       await _retroService.loadRetrospectives(projectId: widget.project['id']);
@@ -86,6 +90,31 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
       });
     }
   }
+
+  Future<void> _loadClientFeedback() async {
+    setState(() {
+      _isLoadingFeedback = true;
+    });
+
+    try {
+      final feedbackService = Provider.of<FeedbackService>(
+          context, listen: false);
+      final projectFeedback = await feedbackService.getProjectFeedback(
+          widget.project['id']);
+
+      setState(() {
+        _clientFeedback = projectFeedback;
+        _isLoadingFeedback = false;
+      });
+    } catch (e) {
+      print('ERROR loading client feedback: $e');
+      setState(() {
+        _clientFeedback = [];
+        _isLoadingFeedback = false;
+      });
+    }
+  }
+
 // Generate retrospective reports from real data (fixed DateTime handling)
   List<Map<String, dynamic>> _generateRetroReports() {
     return closedRetrospectives.map((retro) {
@@ -121,11 +150,14 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
       };
     }).toList();
   }
+
   // Calculate overall project progress based on sprint completion
   double _calculateProjectProgress() {
     if (sprints.isEmpty) return 0.0;
 
-    int completedSprints = sprints.where((s) => s['status'] == 'Completed').length;
+    int completedSprints = sprints
+        .where((s) => s['status'] == 'Completed')
+        .length;
     return completedSprints / sprints.length;
   }
 
@@ -148,7 +180,8 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
     }
 
     // Method 2: Calculate from task completion (you'll need TaskService for this)
-    if (activeSprint!['completedTasks'] != null && activeSprint!['totalTasks'] != null) {
+    if (activeSprint!['completedTasks'] != null &&
+        activeSprint!['totalTasks'] != null) {
       final completed = activeSprint!['completedTasks'] as int? ?? 0;
       final total = activeSprint!['totalTasks'] as int? ?? 0;
       print('Task completion: $completed/$total');
@@ -187,8 +220,12 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
 
       if (startDate != null && endDate != null) {
         final now = DateTime.now();
-        final totalDuration = endDate.difference(startDate).inDays;
-        final elapsedDuration = now.difference(startDate).inDays;
+        final totalDuration = endDate
+            .difference(startDate)
+            .inDays;
+        final elapsedDuration = now
+            .difference(startDate)
+            .inDays;
 
         print('Total Duration: $totalDuration days');
         print('Elapsed Duration: $elapsedDuration days');
@@ -239,8 +276,10 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
 
   void _onItemTapped(int index) {
     if (index == 0) Navigator.pushReplacementNamed(context, '/scrumMasterHome');
-    if (index == 1) Navigator.pushReplacementNamed(context, '/scrumMasterProjects');
-    if (index == 2) Navigator.pushReplacementNamed(context, '/smTimeScheduling');
+    if (index == 1) Navigator.pushReplacementNamed(
+        context, '/scrumMasterProjects');
+    if (index == 2) Navigator.pushReplacementNamed(
+        context, '/smTimeScheduling');
     if (index == 3) Navigator.pushReplacementNamed(context, '/smMyProfile');
   }
 
@@ -254,13 +293,99 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
     });
   }
 
+
   void _openReportDetails(Map<String, dynamic> report) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => DetailedRetroReportScreen(
-          retroReport: report,
-        ),
+        builder: (context) =>
+            DetailedRetroReportScreen(
+              retroReport: report,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildFeedbackCard(Map<String, dynamic> feedback) {
+    final List<Widget> stars = List.generate(5, (index) {
+      return Icon(
+        index < (feedback['rating'] ?? 0) ? Icons.star : Icons.star_border,
+        color: index < (feedback['rating'] ?? 0) ? Colors.amber : Colors.grey,
+        size: 16,
+      );
+    });
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, 2),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Client name and rating row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                feedback['clientName'] ?? 'Client',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF313131),
+                ),
+              ),
+              Row(children: stars),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Comment
+          if (feedback['comment'] != null && feedback['comment']
+              .toString()
+              .isNotEmpty)
+            Text(
+              feedback['comment'],
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF666666),
+              ),
+            ),
+
+          const SizedBox(height: 8),
+
+          // Date and sprint info
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                feedback['dateSubmitted'] ?? '',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF999999),
+                ),
+              ),
+              if (feedback['sprintName'] != null)
+                Text(
+                  feedback['sprintName'],
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF004AAD),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -274,7 +399,10 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
       );
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
+    final screenWidth = MediaQuery
+        .of(context)
+        .size
+        .width;
     final projectCompletionRate = _calculateProjectProgress();
     final sprintCompletionRate = _calculateActiveSprintProgress();
 
@@ -316,234 +444,65 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Back Button and Title Row
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Color(0xFF004AAD)),
-                      onPressed: () => Navigator.pop(context),
-                      padding: const EdgeInsets.all(0),
-                      constraints: const BoxConstraints(),
-                    ),
-                    const Text(
-                      'Reports & Analytics',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF313131),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                // Project Name
-                Padding(
-                  padding: const EdgeInsets.only(left: 40),
-                  child: Text(
-                    widget.project['name'] ?? 'Project Name',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF666666),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Overall Project Progress Section
-                const Text(
-                  'Overall Project Progress',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF313131),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Row(
-                          children: [
-                            // Circular progress indicator
-                            CircularPercentIndicator(
-                              radius: 35.0,
-                              lineWidth: 8.0,
-                              animation: true,
-                              percent: projectCompletionRate,
-                              center: Text(
-                                "${(projectCompletionRate * 100).toInt()}%",
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16.0,
-                                  color: Color(0xFF313131),
-                                ),
-                              ),
-                              circularStrokeCap: CircularStrokeCap.round,
-                              progressColor: const Color(0xFF004AAD),
-                              backgroundColor: const Color(0xFFE0E0E0),
-                            ),
-                            const SizedBox(width: 16),
-                            // Text info - using Expanded to prevent overflow
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    "${(projectCompletionRate * 100).toInt()}% Completed",
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF313131),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    sprints.isEmpty
-                                        ? 'No sprints yet'
-                                        : projectCompletionRate < 0.5
-                                        ? 'In progress'
-                                        : projectCompletionRate < 1.0
-                                        ? 'On track to meet deadline'
-                                        : 'Project completed',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFF666666),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Sprint Completion Rate Section
-                const Text(
-                  'Sprint Completion Rate',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF313131),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        child: ScrollbarTheme(
+    data: ScrollbarThemeData(
+    thumbColor: MaterialStateProperty.all(
+    const Color(0xFF004AAD).withOpacity(0.4),
+    ),
+    ),
+          child: Scrollbar(// Add this Scrollbar widget
+            thumbVisibility: true, // Makes scrollbar always visible
+            thickness: 8.0, // Scrollbar thickness
+            radius: const Radius.circular(4.0),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Back Button and Title Row
+                  Row(
                     children: [
-                      // Linear progress indicator - using layout builder for responsive width
-                      LayoutBuilder(
-                          builder: (context, constraints) {
-                            return LinearPercentIndicator(
-                              width: constraints.maxWidth,
-                              animation: true,
-                              lineHeight: 20.0,
-                              animationDuration: 1000,
-                              percent: sprintCompletionRate,
-                              center: Text(
-                                "${(sprintCompletionRate * 100).toInt()}%",
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              linearStrokeCap: LinearStrokeCap.roundAll,
-                              progressColor: const Color(0xFF004AAD),
-                              backgroundColor: const Color(0xFFE0E0E0),
-                            );
-                          }
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Color(
+                            0xFF004AAD)),
+                        onPressed: () => Navigator.pop(context),
+                        padding: const EdgeInsets.all(0),
+                        constraints: const BoxConstraints(),
                       ),
-                      const SizedBox(height: 12),
-                      // Sprint info
-                      Text(
-                        activeSprint != null
-                            ? 'Current Sprint: ${activeSprint!['name'] ?? 'Active Sprint'}'
-                            : 'No active sprint',
-                        style: const TextStyle(
-                          fontSize: 14,
+                      const Text(
+                        'Reports & Analytics',
+                        style: TextStyle(
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF313131),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        activeSprint != null
-                            ? 'Sprint progress based on timeline'
-                            : 'Create a sprint to track progress',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF666666),
-                        ),
-                      ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Retrospective Reports Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Retrospective Reports',
-                      style: TextStyle(
+                  const SizedBox(height: 4),
+                  // Project Name
+                  Padding(
+                    padding: const EdgeInsets.only(left: 40),
+                    child: Text(
+                      widget.project['name'] ?? 'Project Name',
+                      style: const TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF313131),
+                        color: Color(0xFF666666),
                       ),
                     ),
-                    if (_retrospectiveReports.isNotEmpty)
-                      TextButton(
-                        onPressed: () {
-                          // Navigate to full retrospectives view
-                          Navigator.pushNamed(context, '/retrospectives');
-                        },
-                        child: const Text('View All'),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
+                  ),
+                  const SizedBox(height: 24),
 
-                // Retrospective reports list
-                if (_retrospectiveReports.isEmpty)
+                  // Overall Project Progress Section
+                  const Text(
+                    'Overall Project Progress',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF313131),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -556,42 +515,169 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
                         ),
                       ],
                     ),
-                    padding: const EdgeInsets.all(24),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.assessment_outlined,
-                            size: 48,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'No retrospective reports yet',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF666666),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Complete sprints and retrospectives to see reports here',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF999999),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
+                    padding: const EdgeInsets.all(16),
+                    child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return Row(
+                            children: [
+                              // Circular progress indicator
+                              CircularPercentIndicator(
+                                radius: 35.0,
+                                lineWidth: 8.0,
+                                animation: true,
+                                percent: projectCompletionRate,
+                                center: Text(
+                                  "${(projectCompletionRate * 100).toInt()}%",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16.0,
+                                    color: Color(0xFF313131),
+                                  ),
+                                ),
+                                circularStrokeCap: CircularStrokeCap.round,
+                                progressColor: const Color(0xFF004AAD),
+                                backgroundColor: const Color(0xFFE0E0E0),
+                              ),
+                              const SizedBox(width: 16),
+                              // Text info - using Expanded to prevent overflow
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      "${(projectCompletionRate * 100)
+                                          .toInt()}% Completed",
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF313131),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      sprints.isEmpty
+                                          ? 'No sprints yet'
+                                          : projectCompletionRate < 0.5
+                                          ? 'In progress'
+                                          : projectCompletionRate < 1.0
+                                          ? 'On track to meet deadline'
+                                          : 'Project completed',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF666666),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }
                     ),
-                  )
-                else
-                  ..._retrospectiveReports.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final report = entry.value;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Sprint Completion Rate Section
+                  const Text(
+                    'Sprint Completion Rate',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF313131),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Linear progress indicator - using layout builder for responsive width
+                        LayoutBuilder(
+                            builder: (context, constraints) {
+                              return LinearPercentIndicator(
+                                width: constraints.maxWidth,
+                                animation: true,
+                                lineHeight: 20.0,
+                                animationDuration: 1000,
+                                percent: sprintCompletionRate,
+                                center: Text(
+                                  "${(sprintCompletionRate * 100).toInt()}%",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                linearStrokeCap: LinearStrokeCap.roundAll,
+                                progressColor: const Color(0xFF004AAD),
+                                backgroundColor: const Color(0xFFE0E0E0),
+                              );
+                            }
+                        ),
+                        const SizedBox(height: 12),
+                        // Sprint info
+                        Text(
+                          activeSprint != null
+                              ? 'Current Sprint: ${activeSprint!['name'] ??
+                              'Active Sprint'}'
+                              : 'No active sprint',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF313131),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          activeSprint != null
+                              ? 'Sprint progress based on timeline'
+                              : 'Create a sprint to track progress',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF666666),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Retrospective Reports Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Retrospective Reports',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF313131),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Retrospective reports list
+                  if (_retrospectiveReports.isEmpty)
+                    Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
@@ -603,155 +689,258 @@ class _SMReportsAnalyticsScreenState extends State<SMReportsAnalyticsScreen> {
                           ),
                         ],
                       ),
-                      child: Column(
-                        children: [
-                          ListTile(
-                            title: Text(
-                              report['name'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF313131),
+                      padding: const EdgeInsets.all(24),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.assessment_outlined,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No retrospective reports yet',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF666666),
                               ),
                             ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Sprint: ${report['sprintName']}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF666666),
-                                  ),
-                                ),
-                                Text(
-                                  'Submitted: ${DateFormat('MMM dd, yyyy').format(report['dateSubmitted'])}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF999999),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.people_outline,
-                                      size: 16,
-                                      color: Color(0xFF004AAD),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${report['responseCount']} responses',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF004AAD),
-                                      ),
-                                    ),
-                                    if (report['satisfactionScore'] > 0) ...[
-                                      const SizedBox(width: 16),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.star,
-                                            size: 16,
-                                            color: Colors.amber,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '${report['satisfactionScore'].toStringAsFixed(1)}',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF666666),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                            trailing: IconButton(
-                              icon: Icon(
-                                report['isExpanded']
-                                    ? Icons.expand_less
-                                    : Icons.expand_more,
-                                color: const Color(0xFF004AAD),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Complete sprints and retrospectives to see reports here',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF999999),
                               ),
-                              onPressed: () => _toggleExpand(index),
+                              textAlign: TextAlign.center,
                             ),
-                            onTap: () => _openReportDetails(report),
-                          ),
-                          if (report['isExpanded'])
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                              child: Column(
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ..._retrospectiveReports
+                        .asMap()
+                        .entries
+                        .map((entry) {
+                      final index = entry.key;
+                      final report = entry.value;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              title: Text(
+                                report['name'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF313131),
+                                ),
+                              ),
+                              subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Divider(),
-                                  const SizedBox(height: 8),
                                   Text(
-                                    'Report Summary',
+                                    'Sprint: ${report['sprintName']}',
                                     style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF313131),
+                                      color: Color(0xFF666666),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Submitted: ${DateFormat('MMM dd, yyyy')
+                                        .format(report['dateSubmitted'])}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF999999),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                      Icon(
+                                        Icons.people_outline,
+                                        size: 16,
+                                        color: Color(0xFF004AAD),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${report['responseCount']} responses',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF004AAD),
+                                        ),
+                                      ),
+                                      if (report['satisfactionScore'] > 0) ...[
+                                        const SizedBox(width: 16),
+                                        Row(
                                           children: [
+                                            Icon(
+                                              Icons.star,
+                                              size: 16,
+                                              color: Colors.amber,
+                                            ),
+                                            const SizedBox(width: 4),
                                             Text(
-                                              'Responses: ${report['responseCount']}',
+                                              '${report['satisfactionScore']
+                                                  .toStringAsFixed(1)}',
                                               style: const TextStyle(
-                                                fontSize: 14,
+                                                fontSize: 12,
                                                 color: Color(0xFF666666),
                                               ),
                                             ),
-                                            if (report['satisfactionScore'] > 0)
+                                          ],
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              trailing: IconButton(
+                                icon: Icon(
+                                  report['isExpanded']
+                                      ? Icons.expand_less
+                                      : Icons.expand_more,
+                                  color: const Color(0xFF004AAD),
+                                ),
+                                onPressed: () => _toggleExpand(index),
+                              ),
+                              onTap: () => _openReportDetails(report),
+                            ),
+                            if (report['isExpanded'])
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                    16, 0, 16, 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Divider(),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Report Summary',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF313131),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment
+                                                .start,
+                                            children: [
                                               Text(
-                                                'Avg Rating: ${report['satisfactionScore'].toStringAsFixed(1)}/5.0',
+                                                'Responses: ${report['responseCount']}',
                                                 style: const TextStyle(
                                                   fontSize: 14,
                                                   color: Color(0xFF666666),
                                                 ),
                                               ),
-                                          ],
-                                        ),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed: () => _openReportDetails(report),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF004AAD),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 8,
+                                              if (report['satisfactionScore'] >
+                                                  0)
+                                                Text(
+                                                  'Avg Rating: ${report['satisfactionScore']
+                                                      .toStringAsFixed(1)}/5.0',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    color: Color(0xFF666666),
+                                                  ),
+                                                ),
+                                            ],
                                           ),
                                         ),
-                                        child: const Text(
-                                          'View Details',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
+                                        ElevatedButton(
+                                          onPressed: () =>
+                                              _openReportDetails(report),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                                0xFF004AAD),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 8,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'View Details',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                          ],
+                        ),
+                      );
+                    }).toList(),
 
-                const SizedBox(height: 80), // Extra space for bottom navigation
-              ],
+                  const SizedBox(height: 24),
+
+                  const Text(
+                    'Client Feedback',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF313131),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+// Client Feedback Content
+                  _isLoadingFeedback
+                      ? const Center(child: CircularProgressIndicator())
+                      : _clientFeedback.isEmpty
+                      ? Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          offset: const Offset(0, 4),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'No client feedback available for this project',
+                        style: TextStyle(
+                          color: Color(0xFF808080),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  )
+                      : Column(
+                    children: _clientFeedback
+                        .map((feedback) => _buildFeedbackCard(feedback))
+                        .toList(),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
+      ),
       ),
       bottomNavigationBar: SMBottomNav(
         selectedIndex: _selectedIndex,

@@ -310,10 +310,8 @@ class MyApp extends StatelessWidget {
         },
         '/roadblocks': (context) => const RoadblocksScreen(),
         '/Reports': (context) {
-          final project =
-          ModalRoute.of(context)!.settings.arguments
-          as Map<String, dynamic>;
-          return ReportsAnalyticsScreen(project: {});
+          final project = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return POReportsAnalyticsScreen(project: project);
         },
         //ScrumMaster
         '/scrumMasterHome':
@@ -371,7 +369,8 @@ class MyApp extends StatelessWidget {
         '/tmMyTodo': (context) => const TMMyTodos(),
         '/tmTimeScheduling' : (context) => const TMTimeSchedulingScreen(),
         '/teamMemberSettings' : (context) => const TeamMemberSettings(),
-        '/TMAnalytics': (context) => const TMAnalyticsScreen(project: {}),
+        '/TMAnalytics': (context)  {final project = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+         return TMReportsAnalyticsScreen(project: project);},
         '/teamMemberSprintPlanning':
             (context) => TMSprintPlanningScreen(
           project:
@@ -386,7 +385,8 @@ class MyApp extends StatelessWidget {
         '/clientSettings': (context) => const ClientSettingsScreen(),
         '/clientFeedback': (context) => const ClientFeedbackScreen(),
         '/clientProfile': (context) => const clientProfileScreen(),
-        '/clientAnalytics': (context) => const ClientAnalyticsScreen(project: {}),
+        '/clientAnalytics': (context)  {final project = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+        return CReportsAnalyticsScreen(project: project);},
         '/clientProjects': (context) => const ClientProjectsScreen(),
         '/ClientTeamOverview': (context) {
           final project =

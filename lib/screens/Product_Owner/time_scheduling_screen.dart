@@ -58,9 +58,10 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
 
       if (mounted && projectService.projects.isNotEmpty) {
         setState(() {
-          // Get the name or title from the first project
+          // Use project ID instead of name to avoid duplicates
           final firstProject = projectService.projects[0];
-          _selectedProject = firstProject['name'] ?? firstProject['title'] ?? 'Unnamed Project';
+          _selectedProject = firstProject['id'] ?? firstProject['firestoreId'] ?? '';
+          print('DEBUG: Set initial selected project ID: $_selectedProject');
         });
       }
     } catch (e) {
@@ -156,49 +157,64 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Project dropdown
-                      Consumer<ProjectService>(
-                        builder: (context, projectService, child) {
-                          // If no projects are available
-                          if (projectService.projects.isEmpty) {
-                            return const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text("No projects available. Please create a project first."),
-                            );
-                          }
+                  // Project dropdown
+                  Consumer<ProjectService>(
+                  builder: (context, projectService, child) {
+                    // If no projects are available
+                    if (projectService.projects.isEmpty) {
+              return const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text("No projects available. Please create a project first."),
+              );
+              }
 
-                          // Extract project names
-                          final List<DropdownMenuItem<String>> dropdownItems = [];
-                          for (var project in projectService.projects) {
-                            final name = project['name'] ?? project['title'] ?? 'Unnamed Project';
-                            dropdownItems.add(DropdownMenuItem(
-                              value: name,
-                              child: Text(name),
-                            ));
-                          }
+                  // Create dropdown items using project IDs as values
+                  final List<DropdownMenuItem<String>> dropdownItems = [];
+              final Set<String> addedIds = {}; // Track added IDs to prevent duplicates
 
-                          return DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: const Color(0xFFFDFDFD),
-                              labelText: 'Project',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Color(0xFF004AAD), width: 2),
-                              ),
-                            ),
-                            value: _selectedProject,
-                            items: dropdownItems,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedProject = value;
-                              });
-                            },
-                          );
-                        },
-                      ),
+                  for (var project in projectService.projects) {
+                final projectId = project['id'] ?? project['firestoreId'] ?? '';
+                final projectName = project['name'] ?? project['title'] ?? 'Unnamed Project';
+
+                // Only add if we haven't added this ID already
+                if (projectId.isNotEmpty && !addedIds.contains(projectId)) {
+                  addedIds.add(projectId);
+                  dropdownItems.add(DropdownMenuItem(
+                    value: projectId,
+                    child: Text(projectName),
+                  ));
+                }
+              }
+
+              // Ensure _selectedProject is valid
+              String? currentValue = _selectedProject;
+              if (currentValue == null || !addedIds.contains(currentValue)) {
+                currentValue = dropdownItems.isNotEmpty ? dropdownItems.first.value : null;
+              }
+
+              return DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: const Color(0xFFFDFDFD),
+                  labelText: 'Project',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Color(0xFF004AAD), width: 2),
+                  ),
+                ),
+                value: currentValue,
+                items: dropdownItems,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedProject = value;
+                  });
+                },
+              );
+            },
+              ),
 
                       SizedBox(height: 16),
 
@@ -246,18 +262,26 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
                           return;
                         }
 
-                        // Get project ID from project service
+                        // Get project details using the selected project ID
                         final projectService = Provider.of<ProjectService>(context, listen: false);
-                        final projectIndex = projectService.projects.indexWhere(
-                                (p) => (p['name'] ?? p['title'] ?? '') == _selectedProject
+                        final selectedProject = projectService.projects.firstWhere(
+                              (p) => (p['id'] ?? p['firestoreId'] ?? '') == _selectedProject,
+                          orElse: () => <String, dynamic>{},
                         );
 
-                        if (projectIndex == -1) {
+                        if (selectedProject.isEmpty) {
                           Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Selected project not found'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
                           return;
                         }
 
-                        final projectId = projectService.projects[projectIndex]['id'];
+                        final projectId = _selectedProject!; // Already have the ID
+                        final projectName = selectedProject['name'] ?? selectedProject['title'] ?? 'Unnamed Project';
 
                         try {
                           // Add event to Firestore
@@ -266,7 +290,7 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
                             'date': Timestamp.fromDate(selectedDay),
                             'userId': userId,
                             'projectId': projectId,
-                            'projectName': _selectedProject,
+                            'projectName': projectName,
                             'createdAt': FieldValue.serverTimestamp(),
                           });
 
@@ -291,6 +315,13 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
                             ),
                           );
                         }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Please fill in all fields'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(

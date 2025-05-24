@@ -523,10 +523,21 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               arguments: _project,
             );
           } else if (title == 'Analytics') {
+            // Fix for null project ID issue
+            final projectForNavigation = Map<String, dynamic>.from(_project!);
+
+            // Explicitly set the ID if it's missing
+            if (!projectForNavigation.containsKey('id') || projectForNavigation['id'] == null) {
+              projectForNavigation['id'] = widget.projectId;
+            }
+
+            print('DEBUG: Navigating to Analytics with project data: $projectForNavigation');
+            print('DEBUG: Project ID for navigation: ${projectForNavigation['id']}');
+
             Navigator.pushNamed(
               context,
               '/Reports',
-              arguments: _project,
+              arguments: projectForNavigation,
             );
           }
         },

@@ -372,11 +372,21 @@ class _TeamMemberProjectDetailsScreenState extends State<TeamMemberProjectDetail
               arguments: _project,  // Pass the entire project object
             );
           } else if (title == 'Analytics') {
-            // For future implementation
+            // Fix for null project ID issue
+            final projectForNavigation = Map<String, dynamic>.from(_project!);
+
+            // Explicitly set the ID if it's missing
+            if (!projectForNavigation.containsKey('id') || projectForNavigation['id'] == null) {
+              projectForNavigation['id'] = widget.projectId;
+            }
+
+            print('DEBUG: Navigating to Analytics with project data: $projectForNavigation');
+            print('DEBUG: Project ID for navigation: ${projectForNavigation['id']}');
+
             Navigator.pushNamed(
               context,
               '/TMAnalytics',
-              arguments: _project!['id'],
+              arguments: projectForNavigation,
             );
           }
         },

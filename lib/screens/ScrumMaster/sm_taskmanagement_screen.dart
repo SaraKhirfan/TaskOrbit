@@ -18,7 +18,9 @@ class SMAllTasksManagementScreen extends StatefulWidget {
 
 class _SMAllTasksManagementScreenState extends State<SMAllTasksManagementScreen> with SingleTickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
+  List<Map<String, dynamic>> _tasks = [];
+  List<Map<String, dynamic>> _allTasks = [];
+  bool _isLoading = false;
   late TabController _tabController;
   String _selectedTeamMember = 'All';
   List<String> _teamMembers = ['All'];
@@ -28,7 +30,6 @@ class _SMAllTasksManagementScreenState extends State<SMAllTasksManagementScreen>
   List<String> _projects = ['All'];
   Map<String, String> _projectNames = {};
   Map<String, List<String>> _teamMemberIds = {}; // Added for member name to ID mapping
-  bool _isLoading = false; // Loading indicator flag
 
   void _onItemTapped(int index) {
     if (index == 0) Navigator.pushReplacementNamed(context, '/scrumMasterHome');
@@ -72,12 +73,12 @@ class _SMAllTasksManagementScreenState extends State<SMAllTasksManagementScreen>
 
     // Load ALL tasks, not just assigned ones
     teamMemberTaskService.loadAllProjectTasks().then((_) {
-      final allTasksCount = teamMemberTaskService.getAllTasks().length;
+      final allTasksCount = teamMemberTaskService.getAllProjectTasks().length;
       print('Tasks loaded: $allTasksCount total tasks');
 
       // Debug: print first few task titles if any exist
       if (allTasksCount > 0) {
-        final tasks = teamMemberTaskService.getAllTasks();
+        final tasks = teamMemberTaskService.getAllProjectTasks();
         print('First 3 task titles: ${tasks.take(3).map((t) => t['title'] ?? 'No title').join(', ')}');
       } else {
         print('No tasks were loaded from the service');
@@ -403,9 +404,7 @@ class _SMAllTasksManagementScreenState extends State<SMAllTasksManagementScreen>
           );
         }
 
-        // Get all tasks and filter them manually based on status
-        List<Map<String, dynamic>> allTasks = teamMemberTaskService.getAllTasks();
-
+        List<Map<String, dynamic>> allTasks = teamMemberTaskService.getAllProjectTasks();
         // Debug print all tasks
         print('All tasks (${allTasks.length}) for $status tab');
 

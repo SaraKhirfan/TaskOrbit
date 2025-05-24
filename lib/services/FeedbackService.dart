@@ -376,4 +376,59 @@ class FeedbackService extends ChangeNotifier {
       return [];
     }
   }
+  Future<List<Map<String, dynamic>>> getProjectFeedback(String projectId) async {
+    try {
+      // Add null check for projectId
+      if (projectId.isEmpty) {
+        print('ERROR: Project ID is empty');
+        return [];
+      }
+
+      print('DEBUG: Getting feedback for project: $projectId');
+
+      final feedbackSnapshot = await _firestore
+          .collection('projects')
+          .doc(projectId)
+          .collection('feedback')
+          .orderBy('dateSubmitted', descending: true)
+          .get();
+
+      print('DEBUG: Found ${feedbackSnapshot.docs.length} feedback items for project $projectId');
+
+      final List<Map<String, dynamic>> feedbackList = [];
+
+      for (var doc in feedbackSnapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          data['projectId'] = projectId;
+
+          // Format date if needed with null safety
+          if (data['dateSubmitted'] != null && data['dateSubmitted'] is Timestamp) {
+            final timestamp = data['dateSubmitted'] as Timestamp;
+            final date = timestamp.toDate();
+            data['dateSubmitted'] = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+          } else if (data['dateSubmitted'] == null) {
+            final now = DateTime.now();
+            data['dateSubmitted'] = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+          }
+
+          // Ensure required fields exist with null safety
+          data['rating'] = data['rating'] ?? 0;
+          data['comment'] = data['comment'] ?? '';
+          data['clientName'] = data['clientName'] ?? 'Anonymous Client';
+          data['sprintName'] = data['sprintName'] ?? '';
+
+          feedbackList.add(Map<String, dynamic>.from(data));
+        } catch (e) {
+          print('ERROR processing feedback document: $e');
+        }
+      }
+
+      return feedbackList;
+    } catch (e) {
+      print('ERROR getting project feedback: $e');
+      return [];
+    }
+  }
 }

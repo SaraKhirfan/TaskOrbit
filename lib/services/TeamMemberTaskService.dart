@@ -12,6 +12,7 @@ class TeamMemberTaskService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   List<Map<String, dynamic>> _tasks = [];
+  List<Map<String, dynamic>> _allTasks = [];
   bool _isLoading = false;
 
   List<Map<String, dynamic>> get tasks => _tasks;
@@ -20,6 +21,10 @@ class TeamMemberTaskService extends ChangeNotifier {
   TeamMemberTaskService() {
     // Initialize by loading tasks
     loadTasks();
+  }
+
+  List<Map<String, dynamic>> getAllProjectTasks() {
+    return List.from(_allTasks);
   }
 
   bool isStatusInProgress(String status) {
@@ -797,6 +802,7 @@ class TeamMemberTaskService extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
+      _allTasks.clear(); // Clear the ALL tasks list, not _tasks
 
       final user = _auth.currentUser;
       if (user == null) {
@@ -805,21 +811,43 @@ class TeamMemberTaskService extends ChangeNotifier {
         return;
       }
 
-      _tasks = []; // Clear existing tasks
-      print("TeamMemberTaskService: Loading ALL tasks for projects");
+      print("TeamMemberTaskService: Loading ALL tasks for Scrum Master projects");
 
-      // First get the projects where the user is a member
-      final projectsSnapshot = await _firestore
+      // Query projects where user is Scrum Master or Product Owner
+      final smProjectsQuery = await _firestore
+          .collection('projects')
+          .where('roles.scrumMasters', arrayContains: user.uid)
+          .get();
+
+      final poProjectsQuery = await _firestore
+          .collection('projects')
+          .where('roles.productOwner', isEqualTo: user.uid)
+          .get();
+
+      // Also include legacy member projects
+      final memberProjectsQuery = await _firestore
           .collection('projects')
           .where('members', arrayContains: user.uid)
           .get();
 
-      print("TeamMemberTaskService: Found ${projectsSnapshot.docs.length} projects");
+      // Combine all projects
+      final allProjectDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+      allProjectDocs.addAll(smProjectsQuery.docs);
+      allProjectDocs.addAll(poProjectsQuery.docs);
+      allProjectDocs.addAll(memberProjectsQuery.docs);
+
+      // Remove duplicates
+      final uniqueProjectDocs = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
+      for (final doc in allProjectDocs) {
+        uniqueProjectDocs[doc.id] = doc;
+      }
+
+      print("TeamMemberTaskService: Found ${uniqueProjectDocs.length} managed projects");
 
       // For each project, get all backlog items
-      for (var projectDoc in projectsSnapshot.docs) {
+      for (var projectDoc in uniqueProjectDocs.values) {
         final projectId = projectDoc.id;
-        final projectData = projectDoc.data() as Map<String, dynamic>;
+        final projectData = projectDoc.data();
         final projectName = projectData['name'] ?? 'Unknown Project';
 
         // Get all backlog items in this project
@@ -829,12 +857,12 @@ class TeamMemberTaskService extends ChangeNotifier {
             .collection('backlogs')
             .get();
 
-        print("TeamMemberTaskService: Found ${backlogsSnapshot.docs.length} backlogs in project $projectId");
+        print("TeamMemberTaskService: Found ${backlogsSnapshot.docs.length} backlogs in project $projectName");
 
         // For each backlog item, get all tasks
         for (var backlogDoc in backlogsSnapshot.docs) {
           final backlogId = backlogDoc.id;
-          final backlogData = backlogDoc.data() as Map<String, dynamic>;
+          final backlogData = backlogDoc.data();
           final backlogTitle = backlogData['title'] ?? 'Unknown Backlog';
 
           // Get tasks for this backlog item
@@ -846,11 +874,11 @@ class TeamMemberTaskService extends ChangeNotifier {
               .collection('backlogTasks')
               .get();
 
-          print("TeamMemberTaskService: Found ${tasksSnapshot.docs.length} tasks in backlog $backlogId");
+          print("TeamMemberTaskService: Found ${tasksSnapshot.docs.length} tasks in backlog $backlogTitle");
 
           // Process each task - include ALL tasks, not just assigned ones
           for (var taskDoc in tasksSnapshot.docs) {
-            final taskData = taskDoc.data() as Map<String, dynamic>;
+            final taskData = taskDoc.data();
 
             // Format due date if present
             String formattedDueDate = 'No date';
@@ -866,8 +894,8 @@ class TeamMemberTaskService extends ChangeNotifier {
               }
             }
 
-            // Add this task to our list (regardless of assignment)
-            _tasks.add({
+            // Add this task to _allTasks list (not _tasks)
+            _allTasks.add({
               'id': taskDoc.id,
               'title': taskData['title'] ?? 'Untitled Task',
               'description': taskData['description'] ?? '',
@@ -880,25 +908,21 @@ class TeamMemberTaskService extends ChangeNotifier {
               'backlogTitle': backlogTitle,
               'assignedTo': taskData['assignedTo'],
               'isCompleted': isStatusDone((taskData['status'] ?? '').toString().toLowerCase()),
-
-
               'what': taskData['what'] ?? '',
               'why': taskData['why'] ?? '',
               'how': taskData['how'] ?? '',
               'acceptanceCriteria': taskData['acceptanceCriteria'] ?? '',
-              'storyTitle': backlogTitle, // Map backlog title as story title for consistency
+              'storyTitle': backlogTitle,
               'assignedMembersData': taskData['assignedMembersData'] ?? [],
-
-              // Include attachment data if it exists
               'attachments': taskData['attachments'] ?? [],
             });
 
-            print("TeamMemberTaskService: Added task ${taskDoc.id}");
+            print("TeamMemberTaskService: Added task to _allTasks: ${taskDoc.id}");
           }
         }
       }
 
-      print("TeamMemberTaskService: Loaded ${_tasks.length} total tasks");
+      print("TeamMemberTaskService: Loaded ${_allTasks.length} total tasks for SM view");
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -907,6 +931,7 @@ class TeamMemberTaskService extends ChangeNotifier {
       notifyListeners();
     }
   }
+
   Future<void> reportWorkloadIssue(String projectId, String explanation, String userId) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
