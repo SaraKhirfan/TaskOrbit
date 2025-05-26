@@ -432,162 +432,242 @@ class TeamMemberTaskService extends ChangeNotifier {
     }
   }
 
-  // New method for getting team members with tasks for Scrum Master view
+  // REPLACE the getTeamMembersWithTasks method with this Team Member filtered version:
   Future<List<Map<String, dynamic>>> getTeamMembersWithTasks(String? projectId) async {
     try {
       if (projectId == null || projectId.isEmpty) {
+        print('getTeamMembersWithTasks: No projectId provided');
         return [];
       }
 
-      // Get project members first
+      print('getTeamMembersWithTasks: Loading ONLY Team Members for project: $projectId');
+
+      // Get project document
       final projectDoc = await _firestore.collection('projects').doc(projectId).get();
       if (!projectDoc.exists) {
+        print('getTeamMembersWithTasks: Project not found');
         return [];
       }
 
       final projectData = projectDoc.data() as Map<String, dynamic>;
-      final List<dynamic> memberIds = projectData['members'] ?? [];
 
-      if (memberIds.isEmpty) {
-        return [];
+      // Get Team Members ONLY from roles structure
+      List<String> teamMemberIds = [];
+
+      if (projectData['roles'] != null) {
+        final roles = projectData['roles'] as Map<String, dynamic>;
+        if (roles['teamMembers'] is List) {
+          teamMemberIds = List<String>.from(roles['teamMembers']);
+          print('getTeamMembersWithTasks: Found ${teamMemberIds.length} team members in roles.teamMembers');
+        }
       }
 
-      List<Map<String, dynamic>> teamMembers = [];
+      // Also check legacy members array for users with "Team Member" role
+      if (projectData['members'] is List) {
+        final legacyMembers = List<String>.from(projectData['members']);
+        print('getTeamMembersWithTasks: Checking ${legacyMembers.length} legacy members for Team Member role');
 
-      // Fetch each user and check if they have "Team Member" role
-      for (String memberId in List<String>.from(memberIds)) {
-        final userDoc = await _firestore.collection('users').doc(memberId).get();
-
-        if (userDoc.exists) {
-          final userData = userDoc.data() as Map<String, dynamic>;
-          final String userRole = userData['role'] ?? '';
-
-          // Only process users with "Team Member" role
-          if (userRole == 'Team Member') {
-            // Get all tasks for this project
-            final backlogsSnapshot = await _firestore
-                .collection('projects')
-                .doc(projectId)
-                .collection('backlogs')
-                .get();
-
-            int totalTasks = 0;
-            int notStarted = 0;
-            int inProgress = 0;
-            int done = 0;
-            List<int> dailyWorkload = [0, 0, 0, 0, 0, 0, 0]; // Sun to Sat
-            List<Map<String, dynamic>> currentTasks = [];
-
-            // Process each backlog to find tasks
-            for (var backlogDoc in backlogsSnapshot.docs) {
-              final backlogId = backlogDoc.id;
-              final backlogData = backlogDoc.data() as Map<String, dynamic>;
-              final backlogTitle = backlogData['title'] ?? 'Unknown Backlog';
-
-              final tasksSnapshot = await _firestore
-                  .collection('projects')
-                  .doc(projectId)
-                  .collection('backlogs')
-                  .doc(backlogId)
-                  .collection('backlogTasks')
-                  .get();
-
-              // Process each task
-              for (var taskDoc in tasksSnapshot.docs) {
-                final taskData = taskDoc.data() as Map<String, dynamic>;
-
-                // Check if task is assigned to this team member
-                final assignedTo = taskData['assignedTo'];
-                final assignedMembers = taskData['assignedMembers'] ?? [];
-
-                bool isAssigned = false;
-
-                // Check assignedTo field
-                if (assignedTo == memberId) {
-                  isAssigned = true;
-                }
-
-                // Check assignedMembers array
-                if (assignedMembers is List && assignedMembers.contains(memberId)) {
-                  isAssigned = true;
-                }
-
-                if (isAssigned) {
-                  totalTasks++;
-
-                  // Count tasks by status using standardized helpers
-                  final String status = (taskData['status'] ?? '').toString().toLowerCase();
-
-                  if (isStatusDone(status)) {
-                    done++;
-                  } else if (isStatusInProgress(status)) {
-                    inProgress++;
-                  } else {
-                    // Default to not started
-                    notStarted++;
-                  }
-
-                  // Process due date for workload heatmap
-                  if (taskData['dueDate'] != null) {
-                    try {
-                      final dueDate = taskData['dueDate'] is Timestamp
-                          ? (taskData['dueDate'] as Timestamp).toDate()
-                          : DateTime.parse(taskData['dueDate'].toString());
-
-                      // Get day of week (0 = Sunday, 6 = Saturday)
-                      final dayOfWeek = dueDate.weekday % 7;
-                      dailyWorkload[dayOfWeek]++;
-                    } catch (e) {
-                      print("Error processing due date: $e");
-                    }
-                  }
-
-                  // Add to current tasks list
-                  currentTasks.add({
-                    'id': taskDoc.id,
-                    'title': taskData['title'] ?? 'Untitled Task',
-                    'description': taskData['description'] ?? '',
-                    'status': taskData['status'] ?? 'To Do',
-                    'priority': taskData['priority'] ?? 'Medium',
-                    'dueDate': taskData['dueDate'],
-                    'projectId': projectId,
-                    'backlogId': backlogId,
-                    'backlogTitle': backlogTitle,
-                  });
-                }
+        for (String memberId in legacyMembers) {
+          if (!teamMemberIds.contains(memberId)) { // Avoid duplicates
+            final userDoc = await _firestore.collection('users').doc(memberId).get();
+            if (userDoc.exists) {
+              final userData = userDoc.data() as Map<String, dynamic>;
+              if (userData['role'] == 'Team Member') {
+                teamMemberIds.add(memberId);
+                print('getTeamMembersWithTasks: Added legacy Team Member: ${userData['name']}');
+              } else {
+                print('getTeamMembersWithTasks: Skipping user ${userData['name']} with role: ${userData['role']}');
               }
             }
-
-            // Calculate workload percentage using standard formula
-            int workloadPercentage = calculateWorkloadPercentage(totalTasks, inProgress, notStarted);
-
-            // Create team member data structure
-            String userName = userData['name'] ?? 'Unknown User';
-            String userAvatar = userName.isNotEmpty
-                ? userName.substring(0, min(2, userName.length)).toUpperCase()
-                : 'UN';
-
-            teamMembers.add({
-              'id': memberId,
-              'name': userName,
-              'role': 'Team Member',
-              'avatar': userAvatar,
-              'totalTasks': totalTasks,
-              'notStarted': notStarted,
-              'inProgress': inProgress,
-              'done': done,
-              'workloadPercentage': workloadPercentage,
-              'dailyWorkload': dailyWorkload,
-              'currentTasks': currentTasks,
-            });
           }
         }
       }
 
+      if (teamMemberIds.isEmpty) {
+        print('getTeamMembersWithTasks: No Team Members found in project');
+        print('getTeamMembersWithTasks: This project appears to have no users with role "Team Member"');
+        return [];
+      }
+
+      print('getTeamMembersWithTasks: Processing ${teamMemberIds.length} Team Members');
+
+      List<Map<String, dynamic>> teamMembers = [];
+
+      // Process each Team Member
+      for (String memberId in teamMemberIds) {
+        final userDoc = await _firestore.collection('users').doc(memberId).get();
+
+        if (userDoc.exists) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          final String userName = userData['name'] ?? userData['displayName'] ?? 'Unknown User';
+          final String userRole = userData['role'] ?? 'Unknown';
+
+          print('getTeamMembersWithTasks: Processing Team Member: $userName ($userRole)');
+
+          // Verify this user actually has "Team Member" role
+          if (userRole != 'Team Member') {
+            print('getTeamMembersWithTasks: WARNING - User $userName has role "$userRole", not "Team Member"');
+            continue; // Skip this user
+          }
+
+          // Get all tasks for this project and count assignments for this Team Member
+          final backlogsSnapshot = await _firestore
+              .collection('projects')
+              .doc(projectId)
+              .collection('backlogs')
+              .get();
+
+          print('getTeamMembersWithTasks: Found ${backlogsSnapshot.docs.length} backlogs');
+
+          int totalTasks = 0;
+          int notStarted = 0;
+          int inProgress = 0;
+          int done = 0;
+          List<int> dailyWorkload = [0, 0, 0, 0, 0, 0, 0]; // Sun to Sat
+          List<Map<String, dynamic>> currentTasks = [];
+
+          // Process each backlog to find tasks assigned to this Team Member
+          for (var backlogDoc in backlogsSnapshot.docs) {
+            final backlogId = backlogDoc.id;
+            final backlogData = backlogDoc.data() as Map<String, dynamic>;
+            final backlogTitle = backlogData['title'] ?? 'Unknown Backlog';
+
+            final tasksSnapshot = await _firestore
+                .collection('projects')
+                .doc(projectId)
+                .collection('backlogs')
+                .doc(backlogId)
+                .collection('backlogTasks')
+                .get();
+
+            // Process each task
+            for (var taskDoc in tasksSnapshot.docs) {
+              final taskData = taskDoc.data() as Map<String, dynamic>;
+
+              // Check if task is assigned to this Team Member
+              bool isAssigned = false;
+
+              // Check assignedTo field
+              if (taskData['assignedTo'] == memberId) {
+                isAssigned = true;
+                print('getTeamMembersWithTasks: Task assigned via assignedTo: ${taskData['title']}');
+              }
+
+              // Check assignedMembers array
+              if (!isAssigned && taskData['assignedMembers'] is List) {
+                final assignedMembers = taskData['assignedMembers'] as List;
+                if (assignedMembers.contains(memberId)) {
+                  isAssigned = true;
+                  print('getTeamMembersWithTasks: Task assigned via assignedMembers: ${taskData['title']}');
+                }
+              }
+
+              // Check assignedMembersData
+              if (!isAssigned && taskData['assignedMembersData'] is List) {
+                final assignedMembersData = taskData['assignedMembersData'] as List;
+                for (var memberItem in assignedMembersData) {
+                  if (memberItem is Map) {
+                    if (memberItem['id'] == memberId) {
+                      isAssigned = true;
+                      print('getTeamMembersWithTasks: Task assigned via assignedMembersData: ${taskData['title']}');
+                      break;
+                    }
+
+                    // Check sub-teams
+                    if (memberItem['members'] is List) {
+                      final subMembers = memberItem['members'] as List;
+                      for (var subMember in subMembers) {
+                        if (subMember is Map && subMember['id'] == memberId) {
+                          isAssigned = true;
+                          print('getTeamMembersWithTasks: Task assigned via sub-team: ${taskData['title']}');
+                          break;
+                        }
+                      }
+                      if (isAssigned) break;
+                    }
+                  }
+                }
+              }
+
+              if (isAssigned) {
+                totalTasks++;
+
+                // Count tasks by status using standardized helpers
+                final String status = (taskData['status'] ?? '').toString().toLowerCase();
+
+                if (isStatusDone(status)) {
+                  done++;
+                } else if (isStatusInProgress(status)) {
+                  inProgress++;
+                } else {
+                  notStarted++;
+                }
+
+                // Process due date for workload heatmap
+                if (taskData['dueDate'] != null) {
+                  try {
+                    final dueDate = taskData['dueDate'] is Timestamp
+                        ? (taskData['dueDate'] as Timestamp).toDate()
+                        : DateTime.parse(taskData['dueDate'].toString());
+
+                    // Get day of week (0 = Sunday, 6 = Saturday)
+                    final dayOfWeek = dueDate.weekday % 7;
+                    dailyWorkload[dayOfWeek]++;
+                  } catch (e) {
+                    print("Error processing due date: $e");
+                  }
+                }
+
+                // Add to current tasks list
+                currentTasks.add({
+                  'id': taskDoc.id,
+                  'title': taskData['title'] ?? 'Untitled Task',
+                  'description': taskData['description'] ?? '',
+                  'status': taskData['status'] ?? 'To Do',
+                  'priority': taskData['priority'] ?? 'Medium',
+                  'dueDate': taskData['dueDate'],
+                  'projectId': projectId,
+                  'backlogId': backlogId,
+                  'backlogTitle': backlogTitle,
+                });
+              }
+            }
+          }
+
+          // Calculate workload percentage using standard formula
+          int workloadPercentage = calculateWorkloadPercentage(totalTasks, inProgress, notStarted);
+
+          // Create team member data structure
+          String userAvatar = userName.isNotEmpty
+              ? userName.substring(0, min(2, userName.length)).toUpperCase()
+              : 'UN';
+
+          final memberData = {
+            'id': memberId,
+            'name': userName,
+            'role': 'Team Member', // Force to Team Member since we filtered for this
+            'avatar': userAvatar,
+            'totalTasks': totalTasks,
+            'notStarted': notStarted,
+            'inProgress': inProgress,
+            'done': done,
+            'workloadPercentage': workloadPercentage,
+            'dailyWorkload': dailyWorkload,
+            'currentTasks': currentTasks,
+          };
+
+          teamMembers.add(memberData);
+          print('getTeamMembersWithTasks: Added Team Member: $userName - $totalTasks tasks, $workloadPercentage% workload');
+        } else {
+          print('getTeamMembersWithTasks: User document not found for: $memberId');
+        }
+      }
+
+      print('getTeamMembersWithTasks: Returning ${teamMembers.length} Team Members');
       return teamMembers;
 
     } catch (e) {
-      print('Error getting team members with tasks: $e');
+      print('getTeamMembersWithTasks: Error: $e');
       return [];
     }
   }

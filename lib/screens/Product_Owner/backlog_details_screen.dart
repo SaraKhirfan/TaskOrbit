@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:task_orbit/screens/Product_Owner/BacklogTaskDetailsScreen.dart';
 import 'package:task_orbit/screens/Product_Owner/my_projects_screen.dart';
-import 'package:task_orbit/widgets/drawer_header.dart';
 import 'package:task_orbit/services/project_service.dart';
 import 'package:task_orbit/services/AuthService.dart';
 import 'package:intl/intl.dart';
