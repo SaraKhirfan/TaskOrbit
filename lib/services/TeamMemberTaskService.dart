@@ -45,9 +45,11 @@ class TeamMemberTaskService extends ChangeNotifier {
   bool isStatusNotStarted(String status) {
     final notStartedStatuses = [
       'not started', 'to do', 'todo', 'to-do', 'backlog', 'open',
-      'new', 'pending'
+      'new', 'pending', 'null', ''  // Add these two
     ];
-    return notStartedStatuses.contains(status.toLowerCase().trim());
+    return notStartedStatuses.contains(status.toLowerCase().trim()) ||
+        status.isEmpty ||  // Handle actual empty strings
+        status == 'null';  // Handle 'null' string specifically
   }
 
   List<Map<String, dynamic>> getTasksByStatus(String status) {

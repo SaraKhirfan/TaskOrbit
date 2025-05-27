@@ -427,8 +427,9 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
     );
   }
 
-  // Process tasks and get count by day
   Map<String, int> _getTaskCountsByDay(List<Map<String, dynamic>> tasks) {
+    print("DEBUG: _getTaskCountsByDay called with ${tasks.length} tasks");
+
     // Create a map to store counts for each day
     Map<String, int> dayCounts = {
       'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0
@@ -436,8 +437,13 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
 
     // Process each task
     for (var task in tasks) {
+      print("DEBUG: Processing task: ${task['title']}, dueDate: ${task['dueDate']}");
+
       // Skip tasks without due dates
-      if (task['dueDate'] == null || task['dueDate'] == 'No date') continue;
+      if (task['dueDate'] == null || task['dueDate'] == 'No date' || task['dueDate'] == 'null') {
+        print("DEBUG: Skipping task with no due date");
+        continue;
+      }
 
       try {
         // Parse the due date (format: dd-MM-yyyy)
@@ -447,6 +453,8 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
             int.parse(dateParts[1]),  // Month
             int.parse(dateParts[0])   // Day
         );
+
+        print("DEBUG: Parsed date: $dueDate");
 
         // Get day of week
         String day;
@@ -463,11 +471,14 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
 
         // Increment the count for this day
         dayCounts[day] = (dayCounts[day] ?? 0) + 1;
+        print("DEBUG: Added to $day, new count: ${dayCounts[day]}");
+
       } catch (e) {
         print('Error parsing date: ${task['dueDate']} - $e');
       }
     }
 
+    print("DEBUG: Final day counts: $dayCounts");
     return dayCounts;
   }
 
@@ -874,13 +885,13 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _buildHeatmapBar('Mon', heightValues['Mon']!, barColors['Mon']!, taskCounts['Mon']!),
-                  _buildHeatmapBar('Tue', heightValues['Tue']!, barColors['Tue']!, taskCounts['Tue']!),
-                  _buildHeatmapBar('Wed', heightValues['Wed']!, barColors['Wed']!, taskCounts['Wed']!),
-                  _buildHeatmapBar('Thu', heightValues['Thu']!, barColors['Thu']!, taskCounts['Thu']!),
-                  _buildHeatmapBar('Fri', heightValues['Fri']!, barColors['Fri']!, taskCounts['Fri']!),
-                  _buildHeatmapBar('Sat', heightValues['Sat']!, barColors['Sat']!, taskCounts['Sat']!),
-                  _buildHeatmapBar('Sun', heightValues['Sun']!, barColors['Sun']!, taskCounts['Sun']!),
+                  _buildHeatmapBar('Mon', heightValues['Mon'] ?? 0.0, barColors['Mon'] ?? Colors.grey[300]!, taskCounts['Mon'] ?? 0),
+                  _buildHeatmapBar('Tue', heightValues['Tue'] ?? 0.0, barColors['Tue'] ?? Colors.grey[300]!, taskCounts['Tue'] ?? 0),
+                  _buildHeatmapBar('Wed', heightValues['Wed'] ?? 0.0, barColors['Wed'] ?? Colors.grey[300]!, taskCounts['Wed'] ?? 0),
+                  _buildHeatmapBar('Thu', heightValues['Thu'] ?? 0.0, barColors['Thu'] ?? Colors.grey[300]!, taskCounts['Thu'] ?? 0),
+                  _buildHeatmapBar('Fri', heightValues['Fri'] ?? 0.0, barColors['Fri'] ?? Colors.grey[300]!, taskCounts['Fri'] ?? 0),
+                  _buildHeatmapBar('Sat', heightValues['Sat'] ?? 0.0, barColors['Sat'] ?? Colors.grey[300]!, taskCounts['Sat'] ?? 0),
+                  _buildHeatmapBar('Sun', heightValues['Sun'] ?? 0.0, barColors['Sun'] ?? Colors.grey[300]!, taskCounts['Sun'] ?? 0),
                 ],
               ),
             ),

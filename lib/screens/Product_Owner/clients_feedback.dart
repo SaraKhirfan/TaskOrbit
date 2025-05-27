@@ -221,7 +221,9 @@ class _POClientsFeedbackScreenState extends State<POClientsFeedbackScreen> {
                 const SizedBox(height: 16),
 
                 // Project filter dropdown
+                // Project filter dropdown
                 Container(
+                  width: double.infinity, // Make container full width
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -236,36 +238,40 @@ class _POClientsFeedbackScreenState extends State<POClientsFeedbackScreen> {
                     ],
                   ),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.filter_list,
                         size: 18,
                         color: Color(0xFF004AAD),
                       ),
                       SizedBox(width: 8),
-                      DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedProjectId,
-                          hint: Text('Filter by Project'),
-                          icon: Icon(Icons.arrow_drop_down, color: Color(0xFF004AAD)),
-                          isDense: true,
-                          onChanged: (String? newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                _selectedProjectId = newValue;
-                                _applyProjectFilter();
-                              });
-                            }
-                          },
-                          items: _projects.map<DropdownMenuItem<String>>((Map<String, dynamic> project) {
-                            return DropdownMenuItem<String>(
-                              value: project['id'],
-                              child: Text(
-                                project['name'],
-                                style: TextStyle(fontSize: 14),
-                              ),
-                            );
-                          }).toList(),
+                      Expanded( // Wrap DropdownButton with Expanded
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedProjectId,
+                            hint: Text('Filter by Project'),
+                            icon: Icon(Icons.arrow_drop_down, color: Color(0xFF004AAD)),
+                            isDense: true,
+                            isExpanded: true, // Add this to make dropdown expand
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  _selectedProjectId = newValue;
+                                  _applyProjectFilter();
+                                });
+                              }
+                            },
+                            items: _projects.map<DropdownMenuItem<String>>((Map<String, dynamic> project) {
+                              return DropdownMenuItem<String>(
+                                value: project['id'],
+                                child: Text(
+                                  project['name'],
+                                  style: TextStyle(fontSize: 14),
+                                  overflow: TextOverflow.ellipsis, // Handle long text
+                                  maxLines: 1,
+                                ),
+                              );
+                            }).toList(),
+                          ),
                         ),
                       ),
                     ],
