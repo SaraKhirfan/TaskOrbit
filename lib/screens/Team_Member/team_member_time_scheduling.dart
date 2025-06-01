@@ -158,6 +158,7 @@ class _TMTimeSchedulingScreenState extends State<TMTimeSchedulingScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Project dropdown
+                      // Project dropdown with proper text wrapping
                       Consumer<ProjectService>(
                         builder: (context, projectService, child) {
                           // If no projects are available
@@ -168,45 +169,61 @@ class _TMTimeSchedulingScreenState extends State<TMTimeSchedulingScreen> {
                             );
                           }
 
-                          // Extract project names
+                          // Create dropdown items using project IDs as values
                           final List<DropdownMenuItem<String>> dropdownItems = [];
+                          final Set<String> addedIds = {}; // Track added IDs to prevent duplicates
+
                           for (var project in projectService.projects) {
-                            final name = project['name'] ?? project['title'] ?? 'Unnamed Project';
-                            dropdownItems.add(DropdownMenuItem(
-                              value: name,
-                              child: Text(name),
-                            ));
+                            final projectId = project['id'] ?? project['firestoreId'] ?? '';
+                            final projectName = project['name'] ?? project['title'] ?? 'Unnamed Project';
+
+                            // Only add if we haven't added this ID already
+                            if (projectId.isNotEmpty && !addedIds.contains(projectId)) {
+                              addedIds.add(projectId);
+                              dropdownItems.add(DropdownMenuItem(
+                                value: projectId,
+                                child: Container(
+                                  width: double.infinity,
+                                  child: Text(
+                                    projectName,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ));
+                            }
                           }
 
-                          return DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              filled: true,
-                              fillColor: const Color(0xFFFDFDFD),
-                              labelText: 'Project',
-                              labelStyle: TextStyle(color: Color(0xFF004AAD)), // Add label color
-                              floatingLabelStyle: TextStyle(color: Color(0xFF004AAD)), // Add floating label color
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Color(0xFF004AAD)),
+                          // Ensure _selectedProject is valid
+                          String? currentValue = _selectedProject;
+                          if (currentValue == null || !addedIds.contains(currentValue)) {
+                            currentValue = dropdownItems.isNotEmpty ? dropdownItems.first.value : null;
+                          }
+
+                          return Container(
+                            width: double.infinity,
+                            child: DropdownButtonFormField<String>(
+                              isExpanded: true, // This is crucial to prevent overflow
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: const Color(0xFFFDFDFD),
+                                labelText: 'Project',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: Color(0xFF004AAD), width: 2),
+                                ),
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(color: Color(0xFF004AAD), width: 2),
-                              ),
-                              // Add icon color
-                              iconColor: Color(0xFF004AAD),
+                              value: currentValue,
+                              items: dropdownItems,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedProject = value;
+                                });
+                              },
                             ),
-                            value: _selectedProject,
-                            items: dropdownItems,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedProject = value;
-                              });
-                            },
-                            // Apply blue color to dropdown icon and text
-                            dropdownColor: const Color(0xFFFDFDFD),
-                            icon: Icon(Icons.arrow_drop_down, color: Color(0xFF004AAD)),
-                            style: TextStyle(color: Color(0xFF313131)),
                           );
                         },
                       ),
@@ -218,21 +235,15 @@ class _TMTimeSchedulingScreenState extends State<TMTimeSchedulingScreen> {
                         autofocus: true,
                         decoration: InputDecoration(
                           labelText: 'Event Title',
-                          labelStyle: TextStyle(color: Color(0xFF004AAD)), // Add label color
-                          floatingLabelStyle: TextStyle(color: Color(0xFF004AAD)), // Add floating label color
                           hintText: 'Enter event title',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: Color(0xFF004AAD)),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: Color(0xFF004AAD), width: 2),
                           ),
-                          // Add prefix icon for consistency
-                          prefixIcon: Icon(Icons.event, color: Color(0xFF004AAD)),
                         ),
-                        cursorColor: Color(0xFF004AAD), // Add cursor color
                         onChanged: (value) {
                           eventTitle = value;
                         },
@@ -263,18 +274,26 @@ class _TMTimeSchedulingScreenState extends State<TMTimeSchedulingScreen> {
                           return;
                         }
 
-                        // Get project ID from project service
+                        // Get project details using the selected project ID
                         final projectService = Provider.of<ProjectService>(context, listen: false);
-                        final projectIndex = projectService.projects.indexWhere(
-                                (p) => (p['name'] ?? p['title'] ?? '') == _selectedProject
+                        final selectedProject = projectService.projects.firstWhere(
+                              (p) => (p['id'] ?? p['firestoreId'] ?? '') == _selectedProject,
+                          orElse: () => <String, dynamic>{},
                         );
 
-                        if (projectIndex == -1) {
+                        if (selectedProject.isEmpty) {
                           Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Selected project not found'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
                           return;
                         }
 
-                        final projectId = projectService.projects[projectIndex]['id'];
+                        final projectId = _selectedProject!; // Already have the ID
+                        final projectName = selectedProject['name'] ?? selectedProject['title'] ?? 'Unnamed Project';
 
                         try {
                           // Add event to Firestore
@@ -283,7 +302,7 @@ class _TMTimeSchedulingScreenState extends State<TMTimeSchedulingScreen> {
                             'date': Timestamp.fromDate(selectedDay),
                             'userId': userId,
                             'projectId': projectId,
-                            'projectName': _selectedProject,
+                            'projectName': projectName,
                             'createdAt': FieldValue.serverTimestamp(),
                           });
 
@@ -308,6 +327,13 @@ class _TMTimeSchedulingScreenState extends State<TMTimeSchedulingScreen> {
                             ),
                           );
                         }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Please fill in all fields'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -326,6 +352,7 @@ class _TMTimeSchedulingScreenState extends State<TMTimeSchedulingScreen> {
       },
     );
   }
+
 
   // Delete an event
   Future<void> _deleteEvent(String eventId) async {

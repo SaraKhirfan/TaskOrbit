@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:task_orbit/services/project_service.dart';
 import 'package:task_orbit/services/TodoService.dart';
 import '../../services/AuthService.dart';
+import '../../services/ChatService.dart';
 import '../../widgets/product_owner_drawer.dart';
 
 class ProductOwnerHomeScreen extends StatefulWidget {
@@ -119,10 +120,53 @@ class _ProductOwnerHomeScreenState extends State<ProductOwnerHomeScreen> {
             onPressed: () => _scaffoldKey.currentState?.openDrawer(),
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.chat),
-            color: Color(0xFF004AAD),
-            onPressed: () {},
+          // Chat icon with notification badge
+          Consumer<ChatService>(
+            builder: (context, chatService, child) {
+              return StreamBuilder<int>(
+                stream: chatService.getUnreadMessageCount(),
+                builder: (context, snapshot) {
+                  final unreadCount = snapshot.data ?? 0;
+
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chat),
+                        color: Color(0xFF004AAD),
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/POChat_list');
+                        },
+                      ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              unreadCount > 99 ? '99+' : unreadCount.toString(),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -572,7 +616,7 @@ class _ProductOwnerHomeScreenState extends State<ProductOwnerHomeScreen> {
         children: [
           _buildNavItem(Icons.home, "Home", 0),
           _buildNavItem(Icons.assignment, "Project", 1),
-          _buildNavItem(Icons.schedule, "Schedule", 2),
+          _buildNavItem(Icons.access_time_filled_rounded, "Schedule", 2),
           _buildNavItem(Icons.person, "Profile", 3),
         ],
       ),

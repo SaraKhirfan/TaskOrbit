@@ -48,8 +48,10 @@ class _TeamPerformanceScreenState extends State<TeamPerformanceScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: MyProjectsScreen.primaryColor,
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -143,7 +145,7 @@ class _TeamPerformanceScreenState extends State<TeamPerformanceScreen> {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Projects',),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+        BottomNavigationBarItem(icon: Icon(Icons.access_time_filled_rounded), label: 'Settings'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

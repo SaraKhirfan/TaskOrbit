@@ -30,7 +30,6 @@ class SMDrawer extends StatelessWidget {
             Icons.home,
             isSelected: selectedItem == 'Home',
           ),
-          Divider(),
           _buildDrawerItem(
             context,
             'My Profile',
@@ -74,6 +73,7 @@ class SMDrawer extends StatelessWidget {
             Icons.feedback,
             isSelected: selectedItem == 'Retrospective',
           ),
+          Divider(),
           _buildDrawerItem(
             context,
             'Settings',

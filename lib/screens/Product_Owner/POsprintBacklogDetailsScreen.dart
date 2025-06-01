@@ -6,6 +6,7 @@ import '../../widgets/team_member_drawer.dart';
 import '../../widgets/sm_app_bar.dart';
 import '../../services/sprint_service.dart';
 import 'PO_sprint_task_details_screen.dart';
+import 'my_projects_screen.dart';
 
 class POSprintBacklogDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> story;
@@ -144,7 +145,31 @@ class _POSprintBacklogDetailsScreenState
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFFDFDFD),
-      appBar: SMAppBar(scaffoldKey: _scaffoldKey, title: "My Projects"),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFDFDFD),
+        foregroundColor: const Color(0xFFFDFDFD),
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu),
+            color: MyProjectsScreen.primaryColor,
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.chat),
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            color: MyProjectsScreen.primaryColor,
+            onPressed: () {},
+          ),
+        ],
+      ),
       drawer: ProductOwnerDrawer(selectedItem: 'My Projects'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,7 +247,7 @@ class _POSprintBacklogDetailsScreenState
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(
           icon: Icon(Icons.assignment), label: 'Projects',),
-        BottomNavigationBarItem(icon: Icon(Icons.schedule), label: 'Schedule'),
+        BottomNavigationBarItem(icon: Icon(Icons.access_time_filled_rounded), label: 'Schedule'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

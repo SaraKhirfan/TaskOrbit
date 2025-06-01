@@ -149,8 +149,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: const Color(0xFF004AAD),
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),

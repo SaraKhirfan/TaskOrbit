@@ -114,8 +114,10 @@ class _SprintPlanningScreenState extends State<SprintPlanningScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: MyProjectsScreen.primaryColor,
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -265,7 +267,7 @@ class _SprintPlanningScreenState extends State<SprintPlanningScreen> {
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(
           icon: Icon(Icons.assignment), label: 'Projects',),
-        BottomNavigationBarItem(icon: Icon(Icons.schedule), label: 'Schedule'),
+        BottomNavigationBarItem(icon: Icon(Icons.access_time_filled_rounded), label: 'Schedule'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

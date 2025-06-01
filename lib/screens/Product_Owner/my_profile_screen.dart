@@ -675,8 +675,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: MyProjectsScreen.primaryColor,
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -724,22 +726,34 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFFFDFDFD),
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: MyProjectsScreen.primaryColor,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Projects'),
-          BottomNavigationBarItem(icon: Icon(Icons.access_time_filled_rounded ), label: 'Schedule'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+      bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+  Widget _buildBottomNavBar() {
+    return Container(
+      height: 60,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDFDFD),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildNavItem(Icons.home, "Home", 0),
+          _buildNavItem(Icons.assignment, "Project", 1),
+          _buildNavItem(Icons.access_time_filled_rounded, "Schedule", 2),
+          _buildNavItem(Icons.person, "Profile", 3),
         ],
       ),
     );
   }
+
 
   Widget _buildProfileCard() {
     return Card(
@@ -921,6 +935,31 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final bool isSelected = index == _selectedIndex;
+    return InkWell(
+      onTap: () => _onItemTapped(index),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: isSelected ? const Color(0xFF004AAD) : Colors.grey,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? const Color(0xFF004AAD) : Colors.grey,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

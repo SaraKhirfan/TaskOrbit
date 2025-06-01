@@ -189,7 +189,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           IconButton(
             icon: const Icon(Icons.chat),
             color: Color(0xFF004AAD),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -243,134 +245,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
             ]),
-
-            // Appearance Section
-            _buildSettingSection('Appearance', [
-              _buildSwitchSetting(
-                'Dark Mode',
-                'Enable dark mode for the app',
-                _darkMode,
-                    (value) {
-                  setState(() {
-                    _darkMode = value;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Dark mode will be available in future updates',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      backgroundColor: Color(0xFF004AAD),
-                    ),
-                  );
-                },
-              ),
-              Divider(),
-              ListTile(
-                title: Text(
-                  'Font Size',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF313131),
-                  ),
-                ),
-                subtitle: Text(
-                  'Adjust the text size',
-                  style: TextStyle(color: Color(0xFF666666), fontSize: 12),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.remove, color: Color(0xFF004AAD)),
-                      onPressed: () {
-                        setState(() {
-                          _fontSize = (_fontSize - 0.1).clamp(0.8, 1.5);
-                        });
-                      },
-                    ),
-                    Text(
-                      _fontSize == 1.0
-                          ? 'Normal'
-                          : _fontSize < 1.0
-                          ? 'Small'
-                          : 'Large',
-                      style: TextStyle(color: Color(0xFF666666)),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.add, color: Color(0xFF004AAD)),
-                      onPressed: () {
-                        setState(() {
-                          _fontSize = (_fontSize + 0.1).clamp(0.8, 1.5);
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ]),
-
-            // Privacy & Security Section
-            _buildSettingSection('Privacy & Security', [
-              _buildActionSetting(
-                'Change Password',
-                'Update your account password',
-                Icons.lock,
-                    () {
-                  Navigator.pushReplacementNamed(context, '/MyProfile');
-                },
-              ),
-              Divider(),
-              _buildActionSetting(
-                'Privacy Policy',
-                'Review our privacy policy',
-                Icons.policy,
-                    () {
-                  // Show privacy policy
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        title: Text(
-                          'Privacy Policy',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF313131),
-                          ),
-                        ),
-                        content: SingleChildScrollView(
-                          child: Text(
-                            'Our privacy policy details will be displayed here.',
-                            style: TextStyle(color: Color(0xFF666666)),
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text(
-                              'Close',
-                              style: TextStyle(color: Color(0xFF004AAD)),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-            ]),
-
             // Account Section
             _buildSettingSection('Account', [
-              _buildActionSetting(
-                'Edit Profile',
-                'Update your personal information',
-                Icons.edit,
-                    () {
-                  Navigator.pushReplacementNamed(context, '/MyProfile');
-                },
-              ),
-              Divider(),
               _buildActionSetting(
                 'Delete Account',
                 'Permanently delete your account and data',
@@ -383,49 +259,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
                 },
               ),
+              _buildActionSetting(
+                'Change Password',
+                'Update your account password',
+                Icons.lock,
+                    () {
+                  Navigator.pushReplacementNamed(context, '/MyProfile');
+                },
+              ),
             ]),
 
             // About Section
             _buildSettingSection('About', [
-              _buildActionSetting(
-                'Terms of Service',
-                'Review our terms of service',
-                Icons.description,
-                    () {
-                  // Show terms of service
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return AlertDialog(
-                        backgroundColor: Color(0xFFFDFDFD),
-                        title: Text(
-                          'Terms of Service',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF313131),
-                          ),
-                        ),
-                        content: SingleChildScrollView(
-                          child: Text(
-                            'Our terms of service details will be displayed here.',
-                            style: TextStyle(color: Color(0xFF666666)),
-                          ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text(
-                              'Close',
-                              style: TextStyle(color: Color(0xFF004AAD)),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-              Divider(),
               _buildActionSetting(
                 'Help & Support',
                 'Get help or contact support',
@@ -539,7 +384,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _buildNavItem(Icons.home, "Home", 0),
             _buildNavItem(Icons.assignment, "Project", 1),
-            _buildNavItem(Icons.schedule, "Schedule", 2),
+            _buildNavItem(Icons.access_time_filled_rounded , "Schedule", 2),
             _buildNavItem(Icons.person, "Profile", 3),
           ],
         ),

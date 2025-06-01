@@ -143,8 +143,10 @@ class _MyTasksState extends State<MyTasks> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: const Color(0xFF004AAD),
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -167,7 +169,6 @@ class _MyTasksState extends State<MyTasks> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _buildTodoList(),
-      // Custom unselected navigation bar
       bottomNavigationBar: Container(
         height: 60,
         decoration: BoxDecoration(
@@ -185,7 +186,7 @@ class _MyTasksState extends State<MyTasks> {
           children: [
             _buildNavItem(Icons.home, "Home", 0),
             _buildNavItem(Icons.assignment, "Project", 1),
-            _buildNavItem(Icons.settings, "Schedule", 2),
+            _buildNavItem(Icons.access_time_filled_rounded, "Schedule", 2),
             _buildNavItem(Icons.person, "Profile", 3),
           ],
         ),
@@ -193,7 +194,6 @@ class _MyTasksState extends State<MyTasks> {
     );
   }
 
-  // Build unselected navigation item
   Widget _buildNavItem(IconData icon, String label, int index) {
     return InkWell(
       onTap: () => _onItemTapped(index),

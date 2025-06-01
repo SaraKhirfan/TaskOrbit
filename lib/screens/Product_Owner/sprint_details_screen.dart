@@ -96,7 +96,31 @@ class _POSprintDetailsScreenState extends State<POSprintDetailsScreen> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFFDFDFD),
-      appBar: SMAppBar(scaffoldKey: _scaffoldKey, title: "My Projects"),
+      appBar: AppBar(
+        backgroundColor: Color(0xFFFDFDFD),
+        foregroundColor: Color(0xFFFDFDFD),
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu),
+            color: Color(0xFF004AAD),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.chat),
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            color: Color(0xFF004AAD),
+            onPressed: () {},
+          ),
+        ],
+      ),
       drawer: ProductOwnerDrawer(selectedItem: 'My Projects'),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +208,7 @@ class _POSprintDetailsScreenState extends State<POSprintDetailsScreen> {
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(
           icon: Icon(Icons.assignment), label: 'Projects',),
-        BottomNavigationBarItem(icon: Icon(Icons.schedule), label: 'Schedule'),
+        BottomNavigationBarItem(icon: Icon(Icons.access_time_filled_rounded), label: 'Schedule'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

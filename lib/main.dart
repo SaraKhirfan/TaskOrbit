@@ -12,8 +12,12 @@ import 'package:task_orbit/screens/Client/clientSettings.dart';
 import 'package:task_orbit/screens/Client/clientTimeScheduling.dart';
 import 'package:task_orbit/screens/Client/client_project_sprints_screen.dart';
 import 'package:task_orbit/screens/Product_Owner/ActivityLogsProjectSelectionScreen.dart';
+import 'package:task_orbit/screens/Product_Owner/POChat.dart';
+import 'package:task_orbit/screens/Product_Owner/POChatlist.dart';
 import 'package:task_orbit/screens/Product_Owner/activity_logs_screen.dart';
 import 'package:task_orbit/screens/Product_Owner/clients_feedback.dart';
+import 'package:task_orbit/screens/ScrumMaster/SMChat.dart';
+import 'package:task_orbit/screens/ScrumMaster/SMChatlist.dart';
 import 'package:task_orbit/screens/ScrumMaster/retro_screen.dart';
 import 'package:task_orbit/screens/ScrumMaster/smReports.dart';
 import 'package:task_orbit/screens/ScrumMaster/sm_workloadmonitoring_screen.dart';
@@ -26,6 +30,7 @@ import 'package:task_orbit/screens/Team_Member/team_member_product_backlog_detai
 import 'package:task_orbit/screens/Team_Member/team_member_project_details_screen.dart';
 import 'package:task_orbit/screens/Team_Member/team_member_settings.dart';
 import 'package:task_orbit/screens/Team_Member/team_member_time_scheduling.dart';
+import 'package:task_orbit/services/ChatService.dart';
 import 'package:task_orbit/services/FeedbackService.dart';
 import 'package:task_orbit/services/RetrospectiveService.dart';
 import 'package:task_orbit/services/TeamMemberTaskService.dart';
@@ -36,7 +41,6 @@ import 'screens/Registration/login_screen.dart';
 import 'screens/Registration/signup_screen.dart';
 //Product Owner
 import 'package:task_orbit/screens/Product_Owner/ReportsAndAnalysis.dart';
-import 'package:task_orbit/screens/Product_Owner/Roadblocks_screen.dart';
 import 'package:task_orbit/screens/Product_Owner/Team_Overview.dart';
 import 'package:task_orbit/screens/Product_Owner/add_members_screen.dart';
 import 'package:task_orbit/screens/Product_Owner/my_profile_screen.dart';
@@ -113,6 +117,7 @@ void main() async {
         ChangeNotifierProvider(create: (context) => TeamMemberTaskService()),
         ChangeNotifierProvider(create: (_) => FeedbackService()),
         ChangeNotifierProvider<ActivityLogService>(create: (context) => ActivityLogService(),),
+        ChangeNotifierProvider(create: (_) => ChatService()),
       ],
       child: const MyApp(),
     ),
@@ -254,6 +259,8 @@ class MyApp extends StatelessWidget {
             );
           }
         },
+        '/POChat':(context) => const POChatScreen(),
+        '/POChat_list':(context) => const POChatListScreen(),
         '/POClientsFeedback': (context) => const POClientsFeedbackScreen(),
         '/MyTasks': (context) => const MyTasks(),
         '/MyProfile': (context) => const MyProfileScreen(),
@@ -308,7 +315,6 @@ class MyApp extends StatelessWidget {
           as Map<String, dynamic>;
           return TeamPerformanceScreen();
         },
-        '/roadblocks': (context) => const RoadblocksScreen(),
         '/Reports': (context) {
           final project = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
           return POReportsAnalyticsScreen(project: project);
@@ -342,6 +348,8 @@ class MyApp extends StatelessWidget {
 
           return TMTeamOverviewScreen(project: project);
         },
+        '/SMChat' : (context) => const SMChatScreen(),
+        '/SMChatlist' : (context) => const SMChatListScreen(),
         '/smAllTasksManagement': (context) => const SMAllTasksManagementScreen(),
         '/SMReports': (context) => const SMReportsAnalyticsScreen(project: {}),
         '/smWorkloadMonitor': (context) => const SMTeamWorkloadDashboardScreen(),

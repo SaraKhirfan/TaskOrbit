@@ -325,8 +325,10 @@ class _BacklogDetailsScreenState extends State<BacklogDetailsScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: MyProjectsScreen.primaryColor,
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -806,50 +808,6 @@ class _BacklogDetailsScreenState extends State<BacklogDetailsScreen> {
     );
   }
 
-  Widget _buildStatusButton(String status, bool isSelected) {
-    return ElevatedButton(
-      onPressed: () => _updateStatus(status),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? const Color(0xFF004AAD) : Colors.white,
-        foregroundColor: isSelected ? Colors.white : const Color(0xFF313131),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(
-            color: isSelected ? Colors.transparent : Colors.grey.shade300,
-          ),
-        ),
-      ),
-      child: Text(status),
-    );
-  }
-
-  Future<void> _updateStatus(String newStatus) async {
-    if (widget.story['status'] == newStatus) return;
-
-    try {
-      final projectService = Provider.of<ProjectService>(context, listen: false);
-
-      // Update in Firestore
-      final success = await projectService.updateBacklogItem(
-          widget.projectId,
-          widget.story['id'],
-          {'status': newStatus}
-      );
-
-      if (success && mounted) {
-        setState(() {
-          widget.story['status'] = newStatus;
-        });
-      }
-    } catch (e) {
-      print('Error updating backlog status: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating status: $e')),
-      );
-    }
-  }
-
   Widget _buildStatusChip(String status) {
     Color color;
     switch (status) {
@@ -939,7 +897,7 @@ class _BacklogDetailsScreenState extends State<BacklogDetailsScreen> {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Projects',),
-        BottomNavigationBarItem(icon: Icon(Icons.schedule), label: 'Schedule'),
+        BottomNavigationBarItem(icon: Icon(Icons.access_time_filled_rounded), label: 'Schedule'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

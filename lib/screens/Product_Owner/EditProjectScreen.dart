@@ -299,8 +299,10 @@ class _EditProjectScreenState extends State<EditProjectScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: MyProjectsScreen.primaryColor,
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),

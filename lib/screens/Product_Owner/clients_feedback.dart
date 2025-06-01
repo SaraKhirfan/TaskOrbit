@@ -186,8 +186,10 @@ class _POClientsFeedbackScreenState extends State<POClientsFeedbackScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: POClientsFeedbackScreen.primaryColor,
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -309,10 +311,54 @@ class _POClientsFeedbackScreenState extends State<POClientsFeedbackScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
+      bottomNavigationBar: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFDFDFD),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Icons.home, "Home", 0),
+            _buildNavItem(Icons.assignment, "Project", 1),
+            _buildNavItem(Icons.access_time_filled_rounded, "Schedule", 2),
+            _buildNavItem(Icons.person, "Profile", 3),
+          ],
+        ),
+      ),
     );
   }
-
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    return InkWell(
+      onTap: () => _onItemTapped(index),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.grey),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+                fontFamily: 'Poppins-SemiBold',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _buildFeedbackCard(Map<String, dynamic> feedback) {
     // Get the rating stars
     final List<Widget> stars = List.generate(5, (index) {

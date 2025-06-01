@@ -1,6 +1,9 @@
 // File: lib/screens/Scrum_Master/sm_project_team_screen.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../../services/ChatService.dart';
 import '../../widgets/sm_bottom_nav.dart';
 import '../../widgets/sm_drawer.dart';
 
@@ -191,6 +194,66 @@ class _SMProjectTeamScreenState extends State<SMProjectTeamScreen> {
       });
     }
   }
+  Future<void> _sendMessageToMember(Map<String, dynamic> member) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in to send messages'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Opening chat with ${member['name']}...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+
+      // Get or create direct chat
+      final chatService = Provider.of<ChatService>(context, listen: false);
+      final chatId = await chatService.getOrCreateDirectChat(
+        currentUser.uid,
+        member['id'],
+      );
+
+      // Navigate to chat screen
+      Navigator.pushNamed(
+        context,
+        '/POChat',
+        arguments: {
+          'chatId': chatId,
+          'name': member['name'] ?? 'Unknown',
+          'role': _getMemberRole(member),
+          'avatar': member['name']?.toString().substring(0, 1).toUpperCase() ?? 'U',
+        },
+      );
+    } catch (e) {
+      print('Error opening chat: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening chat: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _getMemberRole(Map<String, dynamic> member) {
+    if (_productOwner != null && _productOwner!['id'] == member['id']) {
+      return 'Product Owner';
+    } else if (_teamMembers.any((tm) => tm['id'] == member['id'])) {
+      return 'Team Member';
+    } else if (_clients.any((c) => c['id'] == member['id'])) {
+      return 'Client';
+    }
+    return 'Team Member';
+  }
 
   void _onItemTapped(int index) {
     if (index == 0) Navigator.pushReplacementNamed(context, '/scrumMasterHome');
@@ -200,16 +263,6 @@ class _SMProjectTeamScreenState extends State<SMProjectTeamScreen> {
       Navigator.pushReplacementNamed(context, '/scrumMasterSettings');
     if (index == 3)
       Navigator.pushReplacementNamed(context, '/scrumMasterProfile');
-  }
-
-  void _sendMessageToMember(Map<String, dynamic> member) {
-    // Implement chat functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Opening chat with ${member['name']}...'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   // Build the Product Owner card (updated to match TeamOverviewScreen style)

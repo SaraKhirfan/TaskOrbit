@@ -262,9 +262,11 @@ class _AddProjectScreenState extends State<AddProjectScreen> {
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.chat),
-            color: MyProjectsScreen.primaryColor,
-            onPressed: () {},
+          icon: const Icon(Icons.chat),
+          color: Color(0xFF004AAD),
+          onPressed: () {
+          Navigator.pushNamed(context, '/POChat_list');
+          },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),

@@ -41,8 +41,10 @@ class _ActivityLogsProjectSelectionScreenState extends State<ActivityLogsProject
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: const Color(0xFF004AAD),
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -403,39 +405,51 @@ class _ActivityLogsProjectSelectionScreenState extends State<ActivityLogsProject
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFFFDFDFD),
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF004AAD),
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(
-          fontFamily: 'Poppins-SemiBold',
-          fontWeight: FontWeight.bold,
+      bottomNavigationBar: Container(
+        height: 60,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFDFDFD),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, -2),
+            ),
+          ],
         ),
-        unselectedLabelStyle: const TextStyle(
-          fontFamily: 'Poppins-SemiBold',
-          fontWeight: FontWeight.bold,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Icons.home, "Home", 0),
+            _buildNavItem(Icons.assignment, "Project", 1),
+            _buildNavItem(Icons.access_time_filled_rounded, "Schedule", 2),
+            _buildNavItem(Icons.person, "Profile", 3),
+          ],
         ),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment),
-            label: 'Projects',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.schedule),
-            label: 'Schedule',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+      ),
+    );
+  }
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    return InkWell(
+      onTap: () => _onItemTapped(index),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.grey),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+                fontFamily: 'Poppins-SemiBold',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,7 +3,8 @@ import 'package:task_orbit/screens/Product_Owner/my_projects_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:task_orbit/services/project_service.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/ChatService.dart';
 import '../../widgets/product_owner_drawer.dart';
 
 class TeamOverviewScreen extends StatefulWidget {
@@ -326,14 +327,66 @@ class _TeamOverviewScreenState extends State<TeamOverviewScreen> {
     if (index == 3) Navigator.pushNamed(context, '/MyProfile');
   }
 
-  void _sendMessageToMember(Map<String, dynamic> member) {
-    // Implement chat functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Opening chat with ${member['name']}...'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  Future<void> _sendMessageToMember(Map<String, dynamic> member) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in to send messages'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Opening chat with ${member['name']}...'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+
+      // Get or create direct chat
+      final chatService = Provider.of<ChatService>(context, listen: false);
+      final chatId = await chatService.getOrCreateDirectChat(
+        currentUser.uid,
+        member['id'],
+      );
+
+      // Navigate to chat screen
+      Navigator.pushNamed(
+        context,
+        '/POChat',
+        arguments: {
+          'chatId': chatId,
+          'name': member['name'] ?? 'Unknown',
+          'role': _getMemberRole(member),
+          'avatar': member['name']?.toString().substring(0, 1).toUpperCase() ?? 'U',
+        },
+      );
+    } catch (e) {
+      print('Error opening chat: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening chat: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+// Helper method to determine member role
+  String _getMemberRole(Map<String, dynamic> member) {
+    if (_scrumMaster != null && _scrumMaster!['id'] == member['id']) {
+      return 'Scrum Master';
+    } else if (_teamMembers.any((tm) => tm['id'] == member['id'])) {
+      return 'Team Member';
+    } else if (_clients.any((c) => c['id'] == member['id'])) {
+      return 'Client';
+    }
+    return 'Team Member';
   }
 
   @override
@@ -354,8 +407,10 @@ class _TeamOverviewScreenState extends State<TeamOverviewScreen> {
           const Spacer(),
           IconButton(
             icon: const Icon(Icons.chat),
-            color: MyProjectsScreen.primaryColor,
-            onPressed: () {},
+            color: Color(0xFF004AAD),
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -467,7 +522,7 @@ class _TeamOverviewScreenState extends State<TeamOverviewScreen> {
             label: 'Projects',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.schedule),
+            icon: Icon(Icons.access_time_filled_rounded),
             label: 'Schedule',
           ),
           BottomNavigationBarItem(

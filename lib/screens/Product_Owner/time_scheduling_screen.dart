@@ -157,7 +157,7 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Project dropdown
-                  // Project dropdown
+                  // Project dropdown with proper text wrapping
                   Consumer<ProjectService>(
                   builder: (context, projectService, child) {
                     // If no projects are available
@@ -181,7 +181,14 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
                   addedIds.add(projectId);
                   dropdownItems.add(DropdownMenuItem(
                     value: projectId,
-                    child: Text(projectName),
+                    child: Container(
+                      width: double.infinity,
+                      child: Text(
+                        projectName,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
                   ));
                 }
               }
@@ -192,26 +199,30 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
                 currentValue = dropdownItems.isNotEmpty ? dropdownItems.first.value : null;
               }
 
-              return DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: const Color(0xFFFDFDFD),
-                  labelText: 'Project',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+              return Container(
+                width: double.infinity,
+                child: DropdownButtonFormField<String>(
+                  isExpanded: true, // This is crucial to prevent overflow
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFFFDFDFD),
+                    labelText: 'Project',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Color(0xFF004AAD), width: 2),
+                    ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Color(0xFF004AAD), width: 2),
-                  ),
+                  value: currentValue,
+                  items: dropdownItems,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedProject = value;
+                    });
+                  },
                 ),
-                value: currentValue,
-                items: dropdownItems,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedProject = value;
-                  });
-                },
               );
             },
               ),
@@ -396,7 +407,9 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
           IconButton(
             icon: const Icon(Icons.chat),
             color: Color(0xFF004AAD),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.pushNamed(context, '/POChat_list');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -726,37 +739,52 @@ class _TimeSchedulingScreenState extends State<TimeSchedulingScreen> {
         child: const Icon(Icons.add, color: Colors.white),
         onPressed: () => _showAddEventDialog(_selectedDay),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFFFDFDFD),
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF004AAD),
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(
-          fontFamily: 'Poppins-SemiBold',
-          fontWeight: FontWeight.bold,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontFamily: 'Poppins-SemiBold',
-          fontWeight: FontWeight.bold,
-        ),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+      bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+  Widget _buildBottomNavBar() {
+    return Container(
+      height: 60,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDFDFD),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment),
-            label: 'Projects',
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildNavItem(Icons.home, "Home", 0),
+          _buildNavItem(Icons.assignment, "Project", 1),
+          _buildNavItem(Icons.access_time_filled_rounded, "Schedule", 2),
+          _buildNavItem(Icons.person, "Profile", 3),
+        ],
+      ),
+    );
+  }
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final bool isSelected = index == _selectedIndex;
+    return InkWell(
+      onTap: () => _onItemTapped(index),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            color: isSelected ? const Color(0xFF004AAD) : Colors.grey,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.schedule),
-            label: 'Schedule',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? const Color(0xFF004AAD) : Colors.grey,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
