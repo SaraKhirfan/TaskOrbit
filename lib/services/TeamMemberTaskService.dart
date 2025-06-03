@@ -1390,5 +1390,57 @@ class TeamMemberTaskService extends ChangeNotifier {
     return {};
   }
 
+  Future<List<Map<String, dynamic>>> getUserWorkloadIssues(String? projectId, String? userId) async {
+    try {
+      if (projectId == null) {
+        print('Project ID is null, cannot load user issues');
+        return [];
+      }
 
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final userIdToUse = userId ?? currentUser?.uid;
+
+      if (userIdToUse == null) {
+        print('User ID is null, cannot load user issues');
+        return [];
+      }
+
+      print('Fetching workload issues for user: $userIdToUse in project: $projectId');
+
+      final QuerySnapshot issuesSnapshot = await _firestore
+          .collection('projects')
+          .doc(projectId)
+          .collection('workloadFlags')
+          .where('userId', isEqualTo: userIdToUse)
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      print('Found ${issuesSnapshot.docs.length} issues for current user');
+
+      List<Map<String, dynamic>> result = issuesSnapshot.docs.map((doc) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        // Convert Firestore Timestamp to DateTime
+        if (data['timestamp'] is Timestamp) {
+          data['timestampDate'] = (data['timestamp'] as Timestamp).toDate();
+        } else {
+          data['timestampDate'] = DateTime.now();
+        }
+
+        if (data['statusUpdatedAt'] is Timestamp) {
+          data['statusUpdatedAt'] = (data['statusUpdatedAt'] as Timestamp).toDate();
+        }
+
+        // Add the document ID
+        data['id'] = doc.id;
+
+        return data;
+      }).toList();
+
+      return result;
+    } catch (e) {
+      print('Error getting user workload issues: $e');
+      return [];
+    }
+  }
 }

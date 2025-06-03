@@ -913,15 +913,13 @@ class _SMTeamWorkloadDashboardScreenState extends State<SMTeamWorkloadDashboardS
 
                     await Provider.of<TeamMemberTaskService>(context, listen: false)
                         .updateWorkloadIssueStatus(
-                        issue['projectId'],
+                        _selectedProjectId!,  // FIXED: Use _selectedProjectId instead of issue['projectId']
                         issue['id'],
                         value
                     );
 
                     // Refresh the list
-                    setState(() {
-                      // refresh logic
-                    });
+                    _loadTeamData();  // FIXED: Call _loadTeamData() to refresh
 
                     ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Issue status updated to $value'))

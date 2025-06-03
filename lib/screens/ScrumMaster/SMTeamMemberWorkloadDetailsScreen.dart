@@ -494,7 +494,19 @@ class _SMTeamMemberWorkloadDetailsScreenState extends State<SMTeamMemberWorkload
   }
 
   Widget _buildWorkloadHeatmap() {
-    final dailyWorkload = List<int>.from(widget.memberData['dailyWorkload']);
+    print("DEBUG: memberData = ${widget.memberData}");
+    // Get actual tasks from member data (like Team Member page)
+    List<Map<String, dynamic>> memberTasks = [];
+    if (widget.memberData.containsKey('tasks') && widget.memberData['tasks'] is List) {
+      memberTasks = List<Map<String, dynamic>>.from(widget.memberData['tasks']);
+    }
+
+    // Use the same logic as Team Member page
+    Map<String, int> taskCountsByDay = _getTaskCountsByDay(memberTasks);
+
+    // Convert to list format for existing heatmap display
+    List<String> dayOrder = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final dailyWorkload = dayOrder.map((day) => taskCountsByDay[day] ?? 0).toList();
 
     // Find the maximum value for scaling
     int maxWorkload = dailyWorkload.reduce((curr, next) => curr > next ? curr : next);
@@ -715,6 +727,76 @@ class _SMTeamMemberWorkloadDetailsScreenState extends State<SMTeamMemberWorkload
         ],
       ),
     );
+  }
+
+  Map<String, int> _getTaskCountsByDay(List<Map<String, dynamic>> tasks) {
+    print("DEBUG: _getTaskCountsByDay called with ${tasks.length} tasks");
+
+    Map<String, int> dayCounts = {
+      'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0
+    };
+
+    for (var task in tasks) {
+      print("DEBUG: Processing task: ${task['title']}, dueDate: ${task['dueDate']}");
+
+      // Skip tasks without due dates
+      if (task['dueDate'] == null || task['dueDate'] == 'No date' || task['dueDate'] == 'null' || task['dueDate'] == '') {
+        print("DEBUG: Skipping task with no due date");
+        continue;
+      }
+
+      try {
+        String dueDateStr = task['dueDate'].toString().trim();
+
+        // Handle different date formats
+        DateTime dueDate;
+
+        if (dueDateStr.contains('-')) {
+          // Parse dd-MM-yyyy format (like "10-06-2025")
+          List<String> dateParts = dueDateStr.split('-');
+          if (dateParts.length == 3) {
+            dueDate = DateTime(
+                int.parse(dateParts[2]),  // Year
+                int.parse(dateParts[1]),  // Month
+                int.parse(dateParts[0])   // Day
+            );
+          } else {
+            print("DEBUG: Invalid date format: $dueDateStr");
+            continue;
+          }
+        } else {
+          // Try to parse as ISO format or other formats
+          dueDate = DateTime.parse(dueDateStr);
+        }
+
+        print("DEBUG: Parsed date: $dueDate");
+
+        // Get day of week
+        String day;
+        switch (dueDate.weekday) {
+          case 1: day = 'Mon'; break;
+          case 2: day = 'Tue'; break;
+          case 3: day = 'Wed'; break;
+          case 4: day = 'Thu'; break;
+          case 5: day = 'Fri'; break;
+          case 6: day = 'Sat'; break;
+          case 7: day = 'Sun'; break;
+          default: day = 'Mon';
+        }
+
+        // Increment the count for this day
+        dayCounts[day] = (dayCounts[day] ?? 0) + 1;
+        print("DEBUG: Added to $day, new count: ${dayCounts[day]}");
+
+      } catch (e) {
+        print('ERROR parsing date: ${task['dueDate']} - $e');
+        // Continue processing other tasks even if one fails
+        continue;
+      }
+    }
+
+    print("DEBUG: Final day counts: $dayCounts");
+    return dayCounts;
   }
 
   Widget _buildCurrentTasks() {

@@ -305,6 +305,18 @@ class _POChatListScreenState extends State<POChatListScreen> {
       timestamp = DateTime.now(); // Fallback
     }
 
+    // FIX: Safely extract unread count
+    int unreadCount = 0;
+    final unreadData = chat['unreadCount'];
+    if (unreadData is int) {
+      unreadCount = unreadData;
+    } else if (unreadData is Map<String, dynamic>) {
+      // If unreadCount is a Map, extract the actual count
+      unreadCount = (unreadData['count'] as num? ?? 0).toInt();
+    } else if (unreadData is num) {
+      unreadCount = unreadData.toInt();
+    }
+
     return Container(
       margin: EdgeInsets.only(bottom: 8),
       child: Material(
@@ -323,7 +335,6 @@ class _POChatListScreenState extends State<POChatListScreen> {
               },
             );
           },
-          // Add long press to delete
           onLongPress: () => _showDeleteConfirmationDialog(chat),
           child: Container(
             padding: EdgeInsets.all(16),
@@ -341,7 +352,7 @@ class _POChatListScreenState extends State<POChatListScreen> {
             ),
             child: Row(
               children: [
-                // Avatar (removed online indicator as requested)
+                // Avatar
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: Color(0xFF004AAD),
@@ -381,16 +392,15 @@ class _POChatListScreenState extends State<POChatListScreen> {
                                 _formatTimestamp(timestamp),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: (chat['unreadCount'] ?? 0) > 0
+                                  color: unreadCount > 0  // FIX: Use unreadCount variable
                                       ? Color(0xFF004AAD)
                                       : Color(0xFF999999),
-                                  fontWeight: (chat['unreadCount'] ?? 0) > 0
+                                  fontWeight: unreadCount > 0  // FIX: Use unreadCount variable
                                       ? FontWeight.w600
                                       : FontWeight.normal,
                                 ),
                               ),
                               SizedBox(width: 8),
-                              // Delete button (visible on hover/interaction)
                               PopupMenuButton<String>(
                                 icon: Icon(
                                   Icons.more_vert,
@@ -439,10 +449,10 @@ class _POChatListScreenState extends State<POChatListScreen> {
                               chat['lastMessage'] ?? 'No messages yet',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: (chat['unreadCount'] ?? 0) > 0
+                                color: unreadCount > 0  // FIX: Use unreadCount variable
                                     ? Color(0xFF313131)
                                     : Color(0xFF666666),
-                                fontWeight: (chat['unreadCount'] ?? 0) > 0
+                                fontWeight: unreadCount > 0  // FIX: Use unreadCount variable
                                     ? FontWeight.w500
                                     : FontWeight.normal,
                               ),
@@ -450,7 +460,7 @@ class _POChatListScreenState extends State<POChatListScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if ((chat['unreadCount'] ?? 0) > 0)
+                          if (unreadCount > 0)  // FIX: Use unreadCount variable
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
@@ -458,7 +468,7 @@ class _POChatListScreenState extends State<POChatListScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                chat['unreadCount'].toString(),
+                                unreadCount.toString(),  // FIX: Use unreadCount variable
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 12,

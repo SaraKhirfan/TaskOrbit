@@ -67,9 +67,10 @@ class FeedbackService extends ChangeNotifier {
 
       final List<Map<String, dynamic>> allFeedback = [];
 
-      // Get projects where the user is product owner or scrum master
-      // This may be a permissions issue - we need to find only projects the user can access
-      final projectsSnapshot = await _firestore.collection('projects').get();
+      final projectsSnapshot = await _firestore
+          .collection('projects')
+          .where('members', arrayContains: user.uid)
+          .get();
       print('DEBUG: Found ${projectsSnapshot.docs.length} projects total');
 
       // For each project, get its feedback

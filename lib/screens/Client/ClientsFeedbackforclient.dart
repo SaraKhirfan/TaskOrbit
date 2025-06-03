@@ -265,11 +265,12 @@ class _ClientFeedbackScreenState extends State<ClientFeedbackScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Project and Sprint info
+            // Project and Sprint info - FIXED
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
+                  flex: 4,  // Give more space to the text content
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -281,11 +282,12 @@ class _ClientFeedbackScreenState extends State<ClientFeedbackScreen> {
                             child: Text(
                               feedback['projectName'] ?? 'Unknown Project',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,  // REDUCED from 16 to 14
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF004AAD),
                               ),
                               overflow: TextOverflow.ellipsis,
+                              maxLines: 2,  // ALLOW 2 lines for long names
                             ),
                           ),
                         ],
@@ -295,11 +297,15 @@ class _ClientFeedbackScreenState extends State<ClientFeedbackScreen> {
                         children: [
                           Icon(Icons.running_with_errors, size: 16, color: Colors.grey[700]),
                           SizedBox(width: 4),
-                          Text(
-                            feedback['sprintName'] ?? 'Unknown Sprint',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
+                          Expanded(
+                            child: Text(
+                              feedback['sprintName'] ?? 'Unknown Sprint',
+                              style: TextStyle(
+                                fontSize: 12,  // REDUCED from 14 to 12
+                                color: Colors.grey[700],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                         ],
@@ -307,12 +313,19 @@ class _ClientFeedbackScreenState extends State<ClientFeedbackScreen> {
                     ],
                   ),
                 ),
-                // Date
-                Text(
-                  feedback['dateSubmitted'] ?? 'No date',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
+                SizedBox(width: 8),
+                // Date - Constrained width
+                Container(
+                  width: 60,  // FIXED width for date
+                  child: Text(
+                    feedback['dateSubmitted'] ?? 'No date',
+                    style: TextStyle(
+                      fontSize: 10,  // REDUCED from 12 to 10
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,  // Allow wrapping for dates
                   ),
                 ),
               ],

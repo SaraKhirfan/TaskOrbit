@@ -185,10 +185,12 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
                           // Process the flag workload submission
                           final explanation = explanationController.text.trim();
                           if (explanation.isNotEmpty) {
+                            // Store the parent context before closing dialog
+                            final parentContext = context;
                             Navigator.pop(context); // Close dialog first
 
-                            // Show loading indicator
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            // Show loading indicator using parent context
+                            ScaffoldMessenger.of(parentContext).showSnackBar(
                               SnackBar(
                                 content: Row(
                                   children: [
@@ -210,15 +212,15 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
 
                             try {
                               // Send to backend
-                              final taskService = Provider.of<TeamMemberTaskService>(context, listen: false);
+                              final taskService = Provider.of<TeamMemberTaskService>(parentContext, listen: false);
                               await taskService.reportWorkloadIssue(
                                 _selectedProjectId ?? '',
                                 explanation,
                                 '', // User ID will be fetched from current user in the service
                               );
 
-                              // Show success
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              // Show success using parent context
+                              ScaffoldMessenger.of(parentContext).showSnackBar(
                                 SnackBar(
                                   content: Text('Workload flag submitted successfully'),
                                   backgroundColor: Colors.green,
@@ -226,8 +228,8 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
                                 ),
                               );
                             } catch (e) {
-                              // Show error
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              // Show error using parent context
+                              ScaffoldMessenger.of(parentContext).showSnackBar(
                                 SnackBar(
                                   content: Text('Error submitting flag: ${e.toString()}'),
                                   backgroundColor: Colors.red,
@@ -236,7 +238,7 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
                               );
                             }
                           } else {
-                            // Show an error if no explanation is provided
+                            // Show error for empty explanation (still in dialog context)
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Please provide an explanation for flagging your workload'),
@@ -611,155 +613,213 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
     return tasksWithDates.first;
   }
 
-  // Build task card
-  Widget _buildTaskCard(Map<String, dynamic> task) {
-    // Extract task details
-    final title = task['title'] ?? 'Untitled Task';
-    final dueDate = task['dueDate'] ?? 'No due date';
-    final status = task['status'] ?? 'Not Started';
-    final backlog = task['backlogTitle'] ?? 'Unknown Backlog';
-    final project = task['project'] ?? 'Unknown Project';
+  Widget _buildMyIssuesSection() {
+    print('DEBUG: Building My Issues Section for project: $_selectedProjectId');
 
-    // Determine status color
-    Color statusColor;
-    switch (status.toLowerCase()) {
-      case 'in progress':
-        statusColor = Colors.blue[700]!;
-        break;
-      case 'done':
-        statusColor = Colors.green[700]!;
-        break;
-      default: // Not Started
-        statusColor = Colors.orange[700]!;
-        break;
-    }
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: Provider.of<TeamMemberTaskService>(context, listen: false)
+          .getUserWorkloadIssues(_selectedProjectId, null),
+      builder: (context, snapshot) {
+        print('DEBUG: FutureBuilder state: ${snapshot.connectionState}');
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          print('DEBUG: Error in FutureBuilder: ${snapshot.error}');
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red[200]!),
+            ),
+            child: Text(
+              'Error loading issues: ${snapshot.error}',
+              style: TextStyle(
+                color: Colors.red[600],
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
+
+        final issues = snapshot.data ?? [];
+        print('DEBUG: Retrieved ${issues.length} issues');
+        print('DEBUG: Issues data: $issues');
+
+        if (issues.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.flag_outlined,
+                  size: 48,
+                  color: Colors.grey[400],
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'No issues flagged',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          children: issues.map((issue) => _buildIssueCard(issue)).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildIssueCard(Map<String, dynamic> issue) {
+    Color statusColor = _getStatusColor(issue['status']);
+    String statusText = _getStatusText(issue['status']);
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            project,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[600]),
-              const SizedBox(width: 4),
-              Text(
-                dueDate,
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              ),
-              const SizedBox(width: 16),
-              Icon(Icons.storage, size: 16, color: Colors.grey[600]),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  backlog,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          // Header with timestamp and status
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
+              Text(
+                _formatTimeAgo(issue['timestampDate']),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
                 ),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  // Navigate to task details
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TeamMemberTaskDetailsScreen(
-                        taskId: task['id'] ?? '',
-                        projectId: task['projectId'] ?? '',
-                        backlogId: task['backlogId'] ?? '',
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF004AAD),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'View Details',
+                child: Text(
+                  statusText,
                   style: TextStyle(
-                    color: Colors.white,
                     fontSize: 12,
+                    color: statusColor,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
             ],
+          ),
+          SizedBox(height: 8),
+          // Issue explanation
+          Text(
+            issue['explanation'] ?? 'No explanation provided',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+            ),
           ),
         ],
       ),
     );
   }
 
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'resolved':
+        return Colors.green;
+      case 'reviewed':
+        return Colors.orange;
+      case 'pending':
+      default:
+        return Colors.red;
+    }
+  }
+
+  String _getStatusText(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'resolved':
+        return 'Resolved';
+      case 'reviewed':
+        return 'Reviewed';
+      case 'pending':
+      default:
+        return 'Pending';
+    }
+  }
+
+  String _formatTimeAgo(DateTime dateTime) {
+    final Duration difference = DateTime.now().difference(dateTime);
+
+    if (difference.inDays > 0) {
+      return difference.inDays == 1 ? '1 day ago' : '${difference.inDays} days ago';
+    } else if (difference.inHours > 0) {
+      return difference.inHours == 1 ? '1 hour ago' : '${difference.inHours} hours ago';
+    } else if (difference.inMinutes > 0) {
+      return difference.inMinutes == 1 ? '1 minute ago' : '${difference.inMinutes} minutes ago';
+    } else {
+      return 'Just now';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Get the task service
     final teamMemberTaskService = Provider.of<TeamMemberTaskService>(context);
-
     // Get all tasks
     final allTasks = teamMemberTaskService.tasks;
-
+    // DEBUG: Print all task statuses
+    print("DEBUG: All task statuses:");
+    for (var task in allTasks) {
+      print("  Task: ${task['title']} - Status: '${task['status']}'");
+    }
     // Filter by project if a project is selected
     final List<Map<String, dynamic>> tasks = _selectedProjectId == null
         ? allTasks
         : allTasks.where((task) => task['projectId'] == _selectedProjectId).toList();
-
+    print("DEBUG: Filtered tasks count: ${tasks.length}");
     // Count tasks by status
     final int totalTasks = tasks.length;
+
     final int notStartedTasks = tasks.where((task) {
       final status = task['status']?.toString().toLowerCase() ?? '';
-      return status == 'not started' || status == 'to do' || status == 'todo' || status == 'open';
+      return status == 'not started' ||
+          status == 'to do' ||
+          status == 'todo' ||
+          status == 'open' ||
+          status == 'null' ||           // FIXED: Include 'null' status
+          status.isEmpty;
     }).length;
 
     final int inProgressTasks = tasks.where((task) {
@@ -896,40 +956,20 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
               ),
             ),
 
-            // Upcoming task section
+            // My Issues section
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Text(
-                'Nearest Deadline Task',
+                'My Flagged Issues',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-
-            // Upcoming task card
             Padding(
               padding: const EdgeInsets.all(16),
-              child: upcomingTask != null
-                  ? _buildTaskCard(upcomingTask)
-                  : Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Text(
-                  'No upcoming tasks',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+              child: _buildMyIssuesSection(),
             ),
           ],
         ),
@@ -940,4 +980,5 @@ class _TeamMemberWorkloadScreenState extends State<TeamMemberWorkloadScreen> {
       ),
     );
   }
+
 }

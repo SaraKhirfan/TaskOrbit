@@ -419,8 +419,18 @@ class _TeamMemberSelectionDialogState extends State<TeamMemberSelectionDialog> {
             itemCount: _projectMembers.length,
             itemBuilder: (context, index) {
               final member = _projectMembers[index];
-              final bool isSelected = _selectedMembers.any((m) =>
-              m['id'] == member['id'] && !m.containsKey('members'));
+              final bool isSelected = _selectedMembers.any((selectedItem) {
+                // Check if this is a direct selection
+                if (selectedItem['id'] == member['id'] && !selectedItem.containsKey('members')) {
+                  return true;
+                }
+                // Check if member is inside a sub-team structure
+                if (selectedItem.containsKey('members') && selectedItem['members'] is List) {
+                  final List<dynamic> members = selectedItem['members'];
+                  return members.any((m) => m['id'] == member['id']);
+                }
+                return false;
+              });
 
               return ListTile(
                 leading: CircleAvatar(
@@ -447,11 +457,9 @@ class _TeamMemberSelectionDialogState extends State<TeamMemberSelectionDialog> {
                     fontSize: 12,
                   ),
                 ),
-                trailing: Radio<String>(  // Changed from Checkbox to Radio
+                trailing: Radio<String>(
                   value: member['id'],
-                  groupValue: _selectedMembers.isNotEmpty && !_selectedMembers.first.containsKey('members')
-                      ? _selectedMembers.first['id']
-                      : null,
+                  groupValue: isSelected ? member['id'] : null,
                   activeColor: Color(0xFF004AAD),
                   onChanged: (String? value) {
                     _toggleMemberSelection(member);

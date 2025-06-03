@@ -646,7 +646,7 @@ class _POReportsAnalyticsScreenState extends State<POReportsAnalyticsScreen> {
                                     ),
                                   ),
                                   linearStrokeCap: LinearStrokeCap.roundAll,
-                                  progressColor: const Color(0xFF004AAD),
+                                  progressColor: const  Color(0xFF00D45E),
                                   backgroundColor: const Color(0xFFE0E0E0),
                                 );
                               }

@@ -135,39 +135,49 @@ class _POClientsFeedbackScreenState extends State<POClientsFeedbackScreen> {
     if (index == 3) Navigator.pushNamed(context, '/MyProfile');
   }
 
-  // Update feedback response
-  void _updateFeedbackResponse(String projectId, String feedbackId, String response) {
-    final feedbackService = Provider.of<FeedbackService>(context, listen: false);
-
+  Future<void> _updateFeedbackResponse(String projectId, String feedbackId, String response) async {
     try {
-      feedbackService.updateFeedbackResponse(projectId, feedbackId, response);
+      final feedbackService = Provider.of<FeedbackService>(context, listen: false);
 
+      // Update in database first
+      await feedbackService.updateFeedbackResponse(projectId, feedbackId, response);
+
+      // FIXED: Update both lists properly
       setState(() {
-        final index = _feedbackItems.indexWhere((item) => item['id'] == feedbackId);
-        if (index != -1) {
-          _feedbackItems[index]['response'] = response;
-          _applyProjectFilter(); // Reapply filter after update
+        // Update in main feedback list
+        final mainIndex = _feedbackItems.indexWhere((item) => item['id'] == feedbackId);
+        if (mainIndex != -1) {
+          _feedbackItems[mainIndex]['response'] = response;
+        }
+
+        // Update in filtered list
+        final filteredIndex = _filteredFeedbackItems.indexWhere((item) => item['id'] == feedbackId);
+        if (filteredIndex != -1) {
+          _filteredFeedbackItems[filteredIndex]['response'] = response;
         }
       });
 
       // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Response submitted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Response submitted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
       print('Error updating feedback: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update response. Please try again.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update response. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
