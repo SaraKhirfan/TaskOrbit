@@ -72,7 +72,7 @@ lib/
 ├── models/
 ├── services/
 ├── screens/
-├── providers/
+├── shared_widgets/
 ├── widgets/
 └── utils/
 
