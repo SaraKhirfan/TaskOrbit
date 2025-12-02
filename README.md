@@ -12,7 +12,7 @@ TaskOrbit provides a structured way for teams to implement Scrum. It organizes w
 
 ---
 
-## Features
+## ✨Features
 
 ### Product Backlog
 - Add, edit, and delete backlog items  
@@ -41,7 +41,7 @@ TaskOrbit provides a structured way for teams to implement Scrum. It organizes w
 
 ---
 
-## Technology Stack
+## 💻Technology Stack
 
 | Component | Technology |
 |----------|------------|
@@ -54,7 +54,7 @@ TaskOrbit provides a structured way for teams to implement Scrum. It organizes w
 
 ---
 
-## System Structure
+## 🛠️System Structure
 
 The core modules of the system include:
 
@@ -66,7 +66,7 @@ The core modules of the system include:
 
 ---
 
-## Folder Structure (Simplified)
+## 📑Folder Structure (Simplified)
 
 lib/
 ├── models/
@@ -79,7 +79,7 @@ lib/
 
 ---
 
-## Documentation Included
+## 📚Documentation Included
 
 - Problem definition  
 - System requirements  
@@ -92,7 +92,7 @@ lib/
 
 ---
 
-## Testing
+## ⚙️Testing
 
 Testing covered:
 
@@ -105,7 +105,7 @@ Testing covered:
 
 ---
 
-## Future Enhancements
+## ⌛Future Enhancements
 
 - Full burndown chart  
 - Team collaboration features  
