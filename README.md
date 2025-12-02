@@ -2,7 +2,7 @@
 
 TaskOrbit is a mobile application designed to help software teams manage their projects using Scrum methodology. It supports backlog management, sprint planning, daily task tracking, and progress monitoring in a simple and organized workflow.
 
-This application was developed as **My Graduation Project** at **the University of Jordan**, completed in **June 2025**, and received a **graded A (4/4)**.
+This application was developed as **My Graduation Project** at **the University of Jordan**, completed in **June 2025**, and received a **grade of A (4/4)**.
 
 ---
 
