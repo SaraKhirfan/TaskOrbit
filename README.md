@@ -71,7 +71,7 @@ The core modules of the system include:
 lib/
 ├── models/
 ├── services/
-├── pages/
+├── screens/
 ├── providers/
 ├── widgets/
 └── utils/
